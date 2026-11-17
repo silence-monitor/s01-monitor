@@ -1,0 +1,20 @@
+# Build output
+/target/
+/web/dist/
+firmware/build/
+firmware/sdkconfig
+firmware/sdkconfig.old
+firmware/dependencies.lock
+
+# Recordings of a real vehicle hold identifying data. Keep them out of the repo.
+/captures
+*.log
+
+# Packages made by scripts/release.sh
+/dist-windows/
+/dist-mac/
+/dist-esp/
+*.zip
+
+# macOS
+.DS_Store

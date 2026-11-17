@@ -1,0 +1,8 @@
+# Name,   Type, SubType, Offset,  Size
+# One 3 MB app (the firmware plus the 1.4 MB web page). No OTA: the ATOM Lite
+# has 4 MB of flash. The nvs partition holds the radio calibration and the
+# custom views saved from the browser app (up to 6 KB, written as a whole
+# list, so the old copy and the new one must fit at the same time).
+nvs,      data, nvs,     0x9000,  0x10000
+phy_init, data, phy,     0x19000, 0x1000
+factory,  app,  factory, 0x20000, 0x300000

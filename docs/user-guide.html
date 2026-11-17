@@ -1,0 +1,522 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Silence S01 Monitor - User Guide</title>
+<!--
+  Source of the user guide. scripts/build_guide.sh turns this page into a PDF
+  with Google Chrome (headless). @VERSION@ and @DATE@ are filled in then.
+  The screenshots in images/ come from invented demo data, never from a real
+  scooter.
+-->
+<style>
+  @page { size: A4; margin: 18mm 17mm 20mm 17mm; }
+  :root { --ink: #1c2420; --muted: #5d6b62; --line: #d5ddd7; --green: #2f6b3a; --soft: #f2f6f3; --warn: #8a5a00; }
+  * { box-sizing: border-box; }
+  html { font: 10.5pt/1.5 -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; color: var(--ink); }
+  body { margin: 0; }
+  h1, h2, h3 { line-height: 1.2; break-after: avoid; }
+  h1 { font-size: 27pt; margin: 0 0 4pt; letter-spacing: -0.5pt; }
+  h2 { font-size: 17pt; margin: 26pt 0 6pt; padding-top: 10pt; border-top: 1.5pt solid var(--green); }
+  h3 { font-size: 12pt; margin: 16pt 0 3pt; color: var(--green); }
+  p, li { orphans: 3; widows: 3; }
+  p { margin: 5pt 0; }
+  ul, ol { margin: 4pt 0 6pt; padding-left: 18pt; }
+  li { margin: 2pt 0; }
+  a { color: var(--green); }
+  code, kbd, .name { font: 9.5pt ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+  kbd { border: 1pt solid var(--line); border-bottom-width: 2pt; border-radius: 3pt; padding: 0 3pt; background: var(--soft); }
+  .name { background: var(--soft); border: 1pt solid var(--line); border-radius: 3pt; padding: 0 3pt; font-family: inherit; font-size: 10pt; }
+  .cover { padding: 38mm 0 0; min-height: 250mm; break-after: page; }
+  .cover .sub { font-size: 14pt; color: var(--muted); margin: 0 0 22pt; }
+  .cover .meta { color: var(--muted); font-size: 10pt; }
+  .cover .icon { width: 34mm; height: 34mm; border-radius: 8mm; background: #101410; display: grid; place-items: center; margin-bottom: 14mm; }
+  .cover .icon i { width: 20mm; height: 20mm; border-radius: 50%; border: 3.6mm solid #9dce7c; display: block; position: relative; }
+  .cover .icon i::after { content: ""; position: absolute; inset: 0; margin: auto; width: 4.6mm; height: 4.6mm; border-radius: 50%; background: #9dce7c; }
+  .toc { margin-bottom: 10pt; }
+  .toc ol { list-style: none; padding: 0; counter-reset: s; }
+  .toc li { display: flex; gap: 8pt; padding: 3pt 0; border-bottom: 1pt dotted var(--line); }
+  .toc li b { color: var(--green); min-width: 16pt; }
+  .toc li span { color: var(--muted); margin-left: auto; font-size: 9.5pt; }
+  figure { margin: 8pt 0 10pt; break-inside: avoid; }
+  figure img { width: 100%; display: block; border: 1pt solid var(--line); border-radius: 4pt; }
+  figcaption { font-size: 9pt; color: var(--muted); margin-top: 3pt; }
+  .phones { display: flex; gap: 10pt; align-items: flex-start; break-inside: avoid; margin: 8pt 0; }
+  .phones figure { margin: 0; flex: 1; }
+  .phones .small { flex: 0.9; }
+  .note, .careful, .tip { border-left: 3pt solid var(--green); background: var(--soft); padding: 6pt 9pt; margin: 8pt 0; border-radius: 0 4pt 4pt 0; break-inside: avoid; }
+  .careful { border-color: var(--warn); background: #fbf5e8; }
+  .note b:first-child, .tip b:first-child, .careful b:first-child { color: var(--green); }
+  .careful b:first-child { color: var(--warn); }
+  table { border-collapse: collapse; width: 100%; margin: 6pt 0 10pt; font-size: 9.8pt; break-inside: avoid; }
+  th, td { border-bottom: 1pt solid var(--line); text-align: left; padding: 3.5pt 6pt 3.5pt 0; vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size: 9pt; text-transform: uppercase; letter-spacing: 0.4pt; }
+  dl { margin: 6pt 0; }
+  dt { font-weight: 600; margin-top: 6pt; }
+  dd { margin: 1pt 0 0 14pt; }
+  .steps li { margin: 4pt 0; }
+  .newpage { break-before: page; }
+  h2 + p, h3 + p, p.keep { break-after: avoid; }
+</style>
+</head>
+<body>
+
+<section class="cover">
+  <div class="icon"><i></i></div>
+  <h1>Silence S01 Monitor</h1>
+  <p class="sub">User guide</p>
+  <p class="meta">For version @VERSION@ of the app &middot; @DATE@<br>
+  Windows, Mac and the browser page served by the ESP32 unit</p>
+  <p class="meta" style="margin-top:40mm; max-width: 120mm;">
+    The pictures in this guide were taken with invented demo data, not from a real scooter.
+    The numbers you see in your own copy will be different.
+  </p>
+</section>
+
+<section class="toc">
+  <h2 style="border:none;margin-top:0;padding-top:0">Contents</h2>
+  <ol>
+    <li><b>1</b> What this is <span>about the app and what it does and does not do</span></li>
+    <li><b>2</b> Getting started <span>open it, try it, connect it</span></li>
+    <li><b>3</b> The window <span>the menu and the bar at the top</span></li>
+    <li><b>4</b> Live <span>the dashboard</span></li>
+    <li><b>5</b> Readings <span>every value as a list</span></li>
+    <li><b>6</b> Flags <span>the on and off signals</span></li>
+    <li><b>7</b> Frames <span>recording, replaying, markers, exports</span></li>
+    <li><b>8</b> Explore <span>working out what an unknown frame means</span></li>
+    <li><b>9</b> Parameters <span>settings stored in the battery and the ECU</span></li>
+    <li><b>10</b> Event log <span>what the battery has recorded</span></li>
+    <li><b>11</b> Saved views <span>keep your own arrangements</span></li>
+    <li><b>12</b> On a phone <span>the narrow layout</span></li>
+    <li><b>13</b> When something goes wrong <span>quick answers</span></li>
+    <li><b>14</b> Words used in this guide <span>a short glossary</span></li>
+  </ol>
+</section>
+
+<h2 style="border-top:none; margin-top:0; padding-top:0">1&nbsp; What this is</h2>
+<p>
+  The Silence S01 (SEAT M&Oacute;) electric scooter has a network inside it called a <b>CAN bus</b>. The battery, the motor
+  controller, the dashboard and the other parts talk to each other on it all the time, in short messages called
+  <b>frames</b>. This app listens to those messages and shows them: the pack voltage and current, the state of
+  charge, the cell voltages, the speed, the on and off signals, and every frame the scooter sends, including the ones
+  nobody has worked out yet.
+</p>
+<p>
+  It comes in two forms that look and work the same. <b>The desktop app</b> (Windows and Mac) talks to the scooter through a
+  small USB adapter called a CANable. <b>The browser page</b> is served by a small ESP32 unit that sits on the scooter,
+  and you open it on a phone, tablet or computer over its own WiFi network.
+</p>
+
+<div class="careful">
+  <b>What it does to your scooter.</b> The app mostly <b>listens</b>. It sends <b>read requests</b>: one
+  request for the battery pack ID when you connect, and the reads you start yourself with the buttons on the Parameters and
+  Event log screens. It can also switch the scooter's <b>debug mode</b> on, but <b>only when you switch it on</b>
+  with the <b>Debug mode</b> switch on the Frames or Flags screen. It is off every time you start, so by default the app only listens, which suits a long
+  recording of an unmodified scooter. Switched on, the app sends debug mode at most twice, only if the scooter does not already report it as on, and
+  switches it off again when you switch it off or disconnect. That is a single short message, and it is all the app sends in
+  that message: it never sends the god-mode or output controls that share it. The app does not write settings. <b>The one thing it can write
+  by your choice is the battery's clock</b>, and only when you press <b>Set battery clock</b> on the Parameters screen and confirm
+  (section 9). The ESP32 unit's firmware (from app version 0.8.0) is built to refuse to transmit anything else, even if something asked it to.
+</div>
+
+<h3>What you need</h3>
+<ul>
+  <li><b>Desktop app:</b> a Windows 10 or 11 computer (64-bit), or a Mac with an Apple silicon chip (M1 or later). Nothing to install.</li>
+  <li><b>To read a real scooter:</b> a <b>CANable</b> USB adapter with &ldquo;slcan&rdquo; firmware, connected to the scooter's CAN connector (the bus runs at
+      250 kbit/s), or the ESP32 unit. This guide does not cover wiring. Only connect something to the scooter when you know how
+      its connector is wired.</li>
+  <li><b>To try it with no scooter:</b> nothing at all. See &ldquo;Try it with no scooter&rdquo; below.</li>
+</ul>
+
+<h2>2&nbsp; Getting started</h2>
+
+<h3>Open the app</h3>
+<p><b>Windows:</b> unzip the folder and double-click <span class="name">s01-monitor.exe</span>. Because the program is not signed,
+Windows may say &ldquo;Windows protected your PC&rdquo;. Click <b>More info</b>, then <b>Run anyway</b>. If the window is blank, update the graphics driver.</p>
+<p><b>Mac:</b> unzip the folder and double-click <span class="name">Silence S01</span> (you can drag it to Applications first). The first time,
+macOS says it cannot check the app. Right-click (or Control-click) it, choose <b>Open</b>, then <b>Open</b> again. If it still
+refuses, open System Settings, Privacy &amp; Security, scroll down and press <b>Open Anyway</b>. You only do this once.</p>
+<p><b>Browser page:</b> join the WiFi network <span class="name">S01-Monitor</span> from the device you want to use (the password is the one
+set in the unit's firmware), then open <span class="name">http://192.168.4.1/</span>. On an iPhone you can use the Share button and
+<b>Add to Home Screen</b> to open it like an app, without Safari's bars.</p>
+
+<h3>Try it with no scooter</h3>
+<ol class="steps">
+  <li>Press <b>Simulate</b> in the bar at the top. The Live, Readings and Flags screens fill with sample data. Press <b>Disconnect</b> to stop.
+      (In a narrow window, Simulate is in the menu marked &ldquo;&hellip;&rdquo;.)</li>
+  <li>The simulation makes no CAN frames, so the Frames and Explore screens stay empty. To practise with those, use a recording
+      (section 7): choose <b>Replay a capture&hellip;</b> on the Frames screen and pick a log file.</li>
+</ol>
+
+<h3>Connect to a scooter</h3>
+<ol class="steps">
+  <li><b>Desktop:</b> plug in the CANable. Pick its port in the box at the top (on a Mac it looks like <code>/dev/cu.usbmodem&hellip;</code>, on Windows
+      like <code>COM3</code>). The adapter may need its Windows driver installed first.<br>
+      <b>Browser page:</b> the box already holds the unit's address, <code>ws://&hellip;/ws</code>.</li>
+  <li>Press <b>Connect</b>. The line under the title changes to &ldquo;Connected&rdquo;, and the screens start to move.</li>
+  <li>Press <b>Disconnect</b> when you are done. If the connection stops by itself, the app says &ldquo;The connection stopped unexpectedly&rdquo;; press
+      Connect to start again.</li>
+</ol>
+
+<h2>3&nbsp; The window</h2>
+<p>
+  The <b>menu on the left</b> takes you between the screens: Live, Readings, Flags, Frames, Explore, Parameters and Event log.
+  The small arrow at the top of the menu hides it to give the screens more room, and shows it again; this helps on a small screen.
+  The version number is at the bottom of the menu.
+</p>
+<p>The <b>bar at the top</b> is the same on every screen:</p>
+<table>
+  <tr><th style="width:26%">Control</th><th>What it does</th></tr>
+  <tr><td><span class="name">Pack &hellip;177</span></td><td>The battery pack's ID (the last three digits). Click it for the whole number. It shows &ldquo;Pack &mdash;&rdquo; until the battery has answered.</td></tr>
+  <tr><td>The clock</td><td>The time the scooter itself reports, when it is sending it.</td></tr>
+  <tr><td>The port box</td><td>Which adapter (or, in the browser, which unit) to use.</td></tr>
+  <tr><td><b>Simulate</b></td><td>Fills the screens with sample data. No scooter needed.</td></tr>
+  <tr><td><b>Connect</b> / <b>Disconnect</b></td><td>Starts and stops listening to the scooter.</td></tr>
+</table>
+<p>
+  Under the title, one line says what the app is doing: Disconnected, Connected, Simulation, or the name of a recording being played back.
+  <b>Click almost anything that shows a value</b> (a tile, a reading, a flag, a cell) and a <b>details panel</b> opens on the right with
+  the name, the current value, where the value comes from in the data, and what is known about it. Where a reading has not been
+  checked against the scooter's own display, the panel says so.
+</p>
+
+<h2 class="newpage">4&nbsp; Live</h2>
+<p>The dashboard. It is what you look at while you ride or charge.</p>
+<figure>
+  <img src="images/live.png" alt="The Live screen with the Ride view: four tiles, a one-minute stream chart, the cell bars with the median summary above them, and the set flags.">
+  <figcaption>The Live screen on the <b>Ride</b> view (demo data).</figcaption>
+</figure>
+<dl>
+  <dt>View</dt>
+  <dd>Chooses which tiles and chart lines are shown: <b>Pack</b>, <b>Ride</b>, <b>Charge</b>, <b>Drive</b> or <b>All</b>, plus any view you saved yourself (section 11).</dd>
+  <dt>Tiles</dt>
+  <dd>The big number for each item, with a little line showing the last few seconds. Click one for its details.</dd>
+  <dt>Stream</dt>
+  <dd>A chart of the same items over time. <b>1 min / 5 min / 10 min / 15 min</b> picks how far back it looks. <b>Split</b> gives each line its
+      own small chart instead of one shared chart (the button then says <b>Overlay</b>). <b>Reset</b> forgets the history and starts again.
+      <b>Save chart</b> makes a picture (PNG). <b>Export data&hellip;</b> saves the numbers as a spreadsheet file (CSV). Moving the pointer over the chart shows the
+      values at that moment. Markers you drop (section 7) appear on it.</dd>
+  <dt>Cells</dt>
+  <dd>One bar for each of the pack's 14 cells (numbered as the app numbers them), with the voltage underneath. Above them is the <b>median</b> (the middle cell voltage), the highest cell and the lowest cell, each as its distance from the median with its cell number, for example <i>+50 mV (cell 3)&nbsp; -20 mV (cell 2)&nbsp; median 3986 mV</i>. A bar turns amber when it is more than 30 mV from the median. Click a bar for its voltage, its distance from the median and the spread of the whole pack (highest minus lowest).</dd>
+  <dt>Set flags</dt>
+  <dd>The on and off signals that are on right now. Click one for its meaning, or <b>All flags</b> to go to the Flags screen.</dd>
+</dl>
+<div class="note">
+  <b>Each line on the chart is stretched to its own range</b>, so a line that only moves a little can still look dramatic.
+  Read the number at the end of the line, not the height.
+</div>
+
+<h2 class="newpage">5&nbsp; Readings</h2>
+<p>The same values as Live, but as a plain list, grouped as <b>Pack</b>, <b>Cells</b>, <b>Scooter</b> and <b>Motor</b>. A dash (&mdash;) means the scooter has not sent that value yet.</p>
+<figure>
+  <img src="images/readings.png" alt="The Readings screen on the Scooter view, with the details panel open on Remaining range.">
+  <figcaption>Readings on the <b>Scooter</b> view, with the details panel open (demo data).</figcaption>
+</figure>
+<ul>
+  <li><b>View</b> chooses a group (<b>Pack, Cells, Scooter, Motor</b>), or <b>All</b>, or one of your saved views.</li>
+  <li><b>Export readings&hellip;</b> saves what is shown as a spreadsheet file (CSV).</li>
+  <li>On the <b>All</b> view you can click rows to switch them off, then name the view and press <b>Save view</b> (section 11).
+      <b>Deselect all</b> / <b>Select all</b> flips every row at once.</li>
+</ul>
+
+<h2 class="newpage">6&nbsp; Flags</h2>
+<p>
+  The scooter sends many single on/off signals packed into a few bytes: battery state, warnings and limits, inputs and outputs
+  (brakes, indicators, side stand, horn and so on), the motor controller's inputs, and the conditions that must be true before the
+  scooter is ready to drive. This screen lays them all out, one small pill for each.
+</p>
+<figure>
+  <img src="images/flags.png" alt="The Flags screen: groups of pills, a few lit in green or amber.">
+  <figcaption>The first groups on the Flags screen (demo data). The list continues below the picture.</figcaption>
+</figure>
+<ul>
+  <li><b>Lit pills are on.</b> Green is an ordinary &ldquo;on&rdquo;, amber is a warning, red is an alarm. Grey pills are off.</li>
+  <li>Click a pill for what it means.</li>
+  <li><b>Export flags&hellip;</b> saves every flag and its state as a spreadsheet file (CSV).</li>
+  <li>A group is empty (all grey) until the scooter has sent the frame it comes from.</li>
+</ul>
+
+<h2 class="newpage">7&nbsp; Frames</h2>
+<p>
+  This screen shows <b>everything the scooter sends</b>, frame by frame, whether the app understands it or not. It is also where you
+  record the bus to a file, play a recording back, and drop markers.
+</p>
+<figure>
+  <img src="images/frames.png" alt="The Frames screen: Record, Replay, Mark, Log values and Export buttons, a markers table and the identifiers table.">
+  <figcaption>The Frames screen (demo data).</figcaption>
+</figure>
+
+<h3>The identifiers table</h3>
+<p class="keep">Every kind of frame has a number called an <b>identifier</b> (ID), written like <code>0x280</code>. The table has one row per ID:</p>
+<table>
+  <tr><th style="width:18%">Column</th><th>Meaning</th></tr>
+  <tr><td>ID</td><td>The frame's identifier, in hexadecimal.</td></tr>
+  <tr><td>Frames, Rate</td><td>How many have arrived, and how often (times a second).</td></tr>
+  <tr><td>DLC</td><td>How many data bytes the frame carries (0 to 8).</td></tr>
+  <tr><td>Data</td><td>The bytes. <b style="color:#2f7a3a">Green</b> bytes changed in the last moment. <b>White</b> bytes have changed at some point. <span style="color:#7d8a82"><b>Grey</b></span> bytes have not moved.</td></tr>
+  <tr><td>Last seen</td><td>How long ago the last frame came. It turns amber when a frame that is normally frequent has gone quiet.</td></tr>
+  <tr><td>Decoding</td><td>What the app makes of it (&ldquo;Pack summary&rdquo;, &ldquo;Drive state&rdquo;&hellip;), or <span style="color:#8a5a00"><b>Not decoded</b></span> when nobody has worked it out yet.</td></tr>
+</table>
+<p>Tick <b>Only not decoded</b> to hide everything the app already understands. Those are the frames to study with Explore (section 8).</p>
+
+<h3>Record and replay</h3>
+<ul>
+  <li><b>Record</b> (while connected) writes every frame to a log file. On a computer you choose where to save it first, and it is written as the frames arrive.
+      In the browser the recording is kept in the browser's own storage as it goes, so a long recording does not fill the page's memory, and it is downloaded when you press <b>Stop recording</b> (as several files if it is very large). If the page closes or the browser stops it first, the next time the page opens it offers <b>Download it</b> or <b>Delete it</b> for what was saved; the last few seconds may be missing. Markers you drop go into the log too.</li>
+  <li><b>Replay a capture&hellip;</b> (while disconnected) plays a log file back through the app, with no scooter, exactly as if it were live. While it plays, a bar under the header on <b>every</b> screen gives you <b>Play / Pause</b>, <b>&lt;</b> and <b>&gt;</b> to step back and forward, a step size (10 ms to 1 minute), a speed box (0.1&times; to 10&times;), <b>Restart</b>, <b>Stop replay</b> and a slider you can drag to any moment. The arrow keys step and Space plays or pauses. Stepping pauses the replay, so you can stop on a short moment (a burst of full power, say) and read the cells or any other screen exactly then. Going back rebuilds everything from the start of the log up to that moment; signals you made and markers you dropped stay. While a recording or a values log is being written the app does not let you jump, because the lines would be written twice, but play, pause and speed still work. Use log files made by the Record button.</li>
+</ul>
+<figure>
+  <img style="width:62%; margin:0 auto" src="images/live-replay.png" alt="The Live screen while a capture replays: the replay bar under the header with Play, step buttons, a step size, a speed box, Restart, Stop replay and a position slider, above the usual tiles, chart and cell bars.">
+  <figcaption>A replay paused at 0:58.8 (demo data). The bar is the same on every screen.</figcaption>
+</figure>
+<h3>Replaying recordings from other tools (experimental)</h3>
+<div class="careful">
+  <b>Experimental support.</b> Reading other tools' recordings was added in version 0.11.0. It has so far been tried only on small files written from each
+  format's documentation, not on real recordings from those tools, and the formats have variants. It may misread a file or refuse one it should accept.
+  Check what the replay bar says about the file (it names the format it read and what it left out), and if a file does not work, keep it and tell us.
+</div>
+<p>
+  <b>Replay a capture&hellip;</b> also takes recordings made by other software. Pick the file as usual (the file box offers <code>.log</code>, <code>.txt</code>,
+  <code>.asc</code> and <code>.csv</code> files). The app works out the format from the first lines of the file, so there is nothing to choose. The app's own
+  recordings and the CANable dump logs are read exactly as before and are not experimental.
+</p>
+<table>
+  <tr><th style="width:17%">Format</th><th style="width:27%">Where it comes from</th><th>How a line looks (invented examples)</th></tr>
+  <tr><td>candump log</td>
+      <td>The Linux SocketCAN tool <code>candump</code> with <code>-L</code>, and python-can. Make one with <code>candump -L can0 &gt; ride.log</code>.</td>
+      <td><code>(1731234567.123456) can0 280#31000000</code><br>A time in seconds, the channel, then the identifier, a <code>#</code> and the data bytes with no spaces.</td></tr>
+  <tr><td>candump, classic layout</td>
+      <td>Plain <code>candump</code> output <b>with time stamps</b> (for example <code>candump -ta can0</code>).</td>
+      <td><code>(1731234567.123456)&nbsp; can0&nbsp; 280&nbsp;&nbsp; [4]&nbsp; 31 00 00 00</code><br>A line may also carry <code>RX</code> or <code>TX</code> before the identifier. Without the time in brackets the file cannot be replayed at its own pace, and the app says so.</td></tr>
+  <tr><td>SavvyCAN CSV</td>
+      <td>SavvyCAN, when you save the frames as a CSV file.</td>
+      <td>A header row <code>Time Stamp,ID,Extended,Dir,Bus,LEN,D1,D2,&hellip;,D8</code>, then rows like <code>1004500,00000280,false,Rx,0,4,31,00,00,00,,,,</code><br>The time is whole microseconds (a number with a decimal point is read as seconds). The columns are found by name, so their order does not matter.</td></tr>
+  <tr><td>Vector ASC</td>
+      <td>Vector CANalyzer and CANoe, and many other loggers that can export <code>.asc</code>.</td>
+      <td><code>&nbsp;&nbsp;0.012345 1&nbsp; 280&nbsp; Rx&nbsp;&nbsp; d 4 31 00 00 00</code><br>The time in seconds, the channel, the identifier in hex, <code>Rx</code> or <code>Tx</code>, <code>d</code> for a data frame, the length and the bytes. The header lines (<code>base hex timestamps absolute</code> and so on) are read; a file that says <code>base dec</code> is read in decimal.</td></tr>
+</table>
+<p>
+  <b>What is used.</b> Only ordinary data frames with an 11-bit identifier, because that is all the scooter sends. Everything else is left out and counted, and the replay bar
+  says how many and why: frames with a 29-bit identifier, remote and error frames and CAN FD frames, frames the logger itself sent (marked <code>Tx</code> or <code>TX</code>),
+  frames on another channel, and lines that look like frames but cannot be read. If a file holds several channels (buses), the busiest one is used and the bar says which.
+</p>
+<p>
+  <b>Time.</b> Replay runs at the file's own pace, counted from the first frame that is kept. Absolute and relative time stamps both work. Times are read to the microsecond
+  and shown to the millisecond. These files have no markers, so the Markers table starts empty.
+</p>
+<p>
+  <b>Not supported yet.</b> PEAK PCAN-View <code>.trc</code> files, Vector <code>.blf</code> and ASAM <code>.mf4</code> binary logs, CAN FD, and saving the app's recordings in
+  these formats. A file in one of those is refused, with a message.
+</p>
+<div class="careful">
+  <b>A recording is a copy of your scooter's data.</b> It can include numbers that identify your battery and your riding. Keep recordings to yourself unless you
+  mean to share them.
+</div>
+
+<h3>Markers</h3>
+<p>
+  A <b>marker</b> is a note you drop at one moment: type something short, like <i>pressed the horn</i>, and press <b>Mark</b> (or press
+  <kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>M</kbd> on a Mac, <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>M</kbd> on Windows, from any screen). The marker is listed in the
+  Markers table with the time since the first frame, it appears on the Live chart, and it goes into a recording. Each marker also <b>remembers what every
+  identifier was saying at that moment</b>, which is what the Compare tool uses (section 8).
+</p>
+
+<h3>Log values and exports</h3>
+<ul>
+  <li><b>Log values</b> writes the main readings to a spreadsheet file (CSV) as you go: 4 rows a second, 1 a second, or 1 every 5 seconds. Press <b>Stop logging</b> to finish.</li>
+  <li><b>Export frames&hellip;</b> saves the identifiers table, and <b>Export markers&hellip;</b> saves the markers, as spreadsheet files.</li>
+</ul>
+
+<h2 class="newpage">8&nbsp; Explore</h2>
+<p>
+  Two tools for working out what an unknown frame means. The idea behind both: <b>make the scooter do one thing, and see which bytes move.</b>
+</p>
+
+<h3>Compare two moments</h3>
+<p>
+  Drop a marker, do something (press the horn, switch the lights, turn the handlebar lock), drop another marker, then compare the two.
+  You can drop markers right here with the Note box and <b>Mark</b>.
+</p>
+<figure>
+  <img src="images/explore-compare.png" alt="The Compare tab: two markers chosen, and a table of three bytes that differ.">
+  <figcaption>Comparing &ldquo;horn off&rdquo; with &ldquo;horn on&rdquo; (invented demo data). One byte of <code>0x6A1</code> goes from 00 to 04: bit 2 is the switch.</figcaption>
+</figure>
+<ul>
+  <li><b>From / to</b> choose the two markers (the newest two are chosen for you). <b>Swap</b> reverses them.</li>
+  <li>The table lists every <b>byte that is different</b>: the ID, what the app calls it, the byte number (the first byte is 0), the value at each marker, and
+      <b>which bits changed</b>. Bit 0 is the smallest.</li>
+  <li><b>Leave out bytes that change all the time</b> (ticked to begin with) hides counters and clocks, which would otherwise be in every comparison. The line above the table says how
+      many were left out. Untick it to see them.</li>
+  <li><b>Save as CSV</b> keeps the table.</li>
+</ul>
+<div class="tip">
+  <b>Keep everything else still.</b> The fewer other things change between the two markers, the shorter the list. If the scooter is moving, almost everything differs.
+  In the picture above, three bytes differ: a slow counter (<code>0x1AC</code>), a value that moves on its own (<code>0x6A0</code>), and the switch (<code>0x6A1</code>).
+  Doing the same thing twice and seeing the same byte move both times is how you become sure.
+</div>
+
+<h3 class="newpage">Signals</h3>
+<p>
+  A <b>signal</b> reads some bytes of one frame as a number and draws it live. Use it when you have a guess (&ldquo;bytes 2 and 3 of this frame are a temperature&rdquo;)
+  and want to watch the number while the scooter does something.
+</p>
+<figure>
+  <img src="images/explore-signals.png" alt="The Signals tab: one saved signal with its chart, and the New signal form with a live preview.">
+  <figcaption>One saved signal (a switch) and a new one being tried (a value with a scale of 0.1). Invented demo data.</figcaption>
+</figure>
+<p class="keep">To make one, fill in the <b>New signal</b> form. You see the result straight away, before you save anything:</p>
+<table>
+  <tr><th style="width:28%">Field</th><th>What to put</th></tr>
+  <tr><td>Name, Unit</td><td>A name for it (you need one to save), and an optional unit such as <code>C</code>.</td></tr>
+  <tr><td>Identifier (hex)</td><td>The frame to read, like <code>6A0</code> or <code>0x6A0</code>. <b>Pick one seen on the bus</b> lists the identifiers that have arrived, and marks the ones that are not decoded.</td></tr>
+  <tr><td>First byte, How many bytes</td><td>Which bytes of the frame (0 to 7), and how many (1 to 4). The bytes being read are <b style="color:#2f7a3a">highlighted in green</b> in the line of bytes under the form.</td></tr>
+  <tr><td>Can be negative</td><td>Tick it if the number can go below zero (a &ldquo;signed&rdquo; number).</td></tr>
+  <tr><td>Byte order</td><td>Appears when you read more than one byte. <b>Last byte is the biggest part</b> is how most of the values the app already decodes are stored. If the number looks wrong, try the other one.</td></tr>
+  <tr><td>Reading = number &times; ___ + ___</td><td>A scale and an offset, to turn the raw number into units. A temperature in tenths of a degree has a scale of <code>0.1</code>. A decimal comma is accepted.</td></tr>
+</table>
+<p>
+  <b>Save signal</b> keeps it (up to 8). Each saved signal shows its current value, the raw number, the bytes, and a chart. <b>Show the last</b> sets how many minutes the charts show.
+  <b>Delete</b> removes a signal after asking. A signal cannot be edited: delete it and make it again. Signals are kept in the same place as your saved views (section 11)
+  and come back next time you open the app.
+</p>
+
+<div class="tip">
+  <b>A worked example.</b> You suspect the horn is on a frame that is not decoded.
+  <ol class="steps" style="margin-top:3pt">
+    <li>Connect. On the Frames screen, tick <b>Only not decoded</b> to see the candidates.</li>
+    <li>Go to Explore, <b>Compare two moments</b>. Type <i>horn off</i> and press <b>Mark</b>.</li>
+    <li>Press the horn and hold it. Type <i>horn on</i> and press <b>Mark</b> again. Release the horn.</li>
+    <li>Read the table. A byte that goes from <code>00</code> to <code>04</code> and shows <i>bit 2</i> is a good suspect.</li>
+    <li>Go to <b>Signals</b>, enter that identifier and byte, and press the horn again while you watch the line. If it follows your finger, <b>Save signal</b> and give it a name.</li>
+  </ol>
+</div>
+<p>
+  The app does not know what a saved signal <i>means</i>, it only shows the number. When you are sure, write it down: that is how the project's notes grow.
+</p>
+
+<h2 class="newpage">9&nbsp; Parameters</h2>
+<p>
+  The battery and the motor controller (ECU) each keep a list of stored settings: limits, thresholds, identity numbers and so on. This screen reads them and shows them side by side.
+  At the top is the <b>Battery clock</b>.
+</p>
+<figure>
+  <img src="images/parameters.png" alt="The Parameters screen: the Battery clock card showing a clock that is years behind, Read from Battery and Read from ECU buttons, baseline buttons, and two columns of parameters.">
+  <figcaption>The top of the Parameters screen before anything has been read (demo). The battery clock in the demo is years behind, so the difference is shown in amber. Every parameter value is a dash until you press a Read button.</figcaption>
+</figure>
+<h3>The battery clock</h3>
+<p>
+  The battery keeps its own clock, which the event log uses for the time of every record. The card shows the battery's date and time next to this device's, and how far apart they are.
+  It turns amber when they are more than a minute apart. A battery clock that has lost its date (it restarts at January 2001 if the battery loses power) shows up here at once.
+</p>
+<ul>
+  <li>Press <b>Set battery clock&hellip;</b>. The app shows the time it will set, which is <b>this device's own date and time</b> (a computer's or a phone's, in its own time zone),
+      and asks you to confirm. Press <b>Set the clock</b>. The time is taken at that moment, so the seconds are right.</li>
+  <li>The app then watches the battery's clock for about three seconds and says whether it now matches. If it does not, check you are connected to the scooter and try again.</li>
+  <li>This sends <b>one message</b> to the battery, and the battery writes the change in its <b>event log</b>. It is the only thing the app ever writes. It is never done by itself, only when you press the button and confirm.</li>
+  <li>The button is off while there is no live connection (not in a simulation or a replay) or while a read is running, and for ten seconds after a set.</li>
+  <li>The battery has no time zone and does not follow daylight saving. When the clocks change, set it again.</li>
+</ul>
+<div class="note"><b>The ESP32 unit.</b> From a browser page served by the ESP32, setting the clock also needs the unit's firmware from app version 0.5.0 or later. With older firmware the unit refuses the message, and the card says the clock still does not match.</div>
+<h3>The settings</h3>
+<ul>
+  <li><b>Read from Battery</b> and <b>Read from ECU</b> ask the device for its settings, one at a time. This is a <b>read only</b> operation: the app never writes a setting.
+      If a device stops answering, the app asks again twice, then stops and says that the battery or the ECU stopped answering, and shows what it has.</li>
+  <li><b>Export parameters&hellip;</b> saves what was read as a spreadsheet file (CSV).</li>
+  <li><b>To see what changed:</b> read, press <b>Set baseline</b>, change something on the scooter, then read again. A list appears showing each parameter that changed, with its <b>Before</b>
+      and <b>Now</b> value. You can also press <b>Compare with file&hellip;</b> and pick a parameter export you saved earlier. <b>Clear baseline</b> forgets it.</li>
+</ul>
+<div class="note"><b>Reads need a live scooter.</b> With the simulation or a replay there is nothing to ask, so these buttons have no effect. Reading takes a little while, because the app asks for each item in turn.</div>
+
+<h2>10&nbsp; Event log</h2>
+<p>The battery keeps a log of events it has recorded, each with a time, a code, some data and a text.</p>
+<figure>
+  <img src="images/events.png" alt="The Event log screen before reading: Read Event Logs, Save Logs, Export CSV and Reset buttons.">
+  <figcaption>The Event log screen before a read.</figcaption>
+</figure>
+<ul>
+  <li><b>Read Event Logs</b> fetches the log from the battery, <b>ten records at a time</b>, with a short pause between each ten. A log of 160 records takes about 20 seconds, and the read stops at the oldest record. This is read only. The line under the buttons says why it is done this way: reading the whole log at once can make the motor controller report a fault, so the app does not do that.</li>
+  <li>If the motor controller reports a fault during the read anyway, the app <b>stops the read</b>, keeps the records it has, and says so. Switch the scooter off and on again to clear the fault.</li>
+  <li>The <b>No.</b> column is the record's number in the battery's log. The newest record has the highest number, so the list always starts with the newest, whatever its date says.</li>
+  <li><b>Save Logs</b> saves the list as a text file, one line a record. <b>Export CSV&hellip;</b> saves it as a spreadsheet file. Both write, after the time, code, data and text, the record's number and the raw bytes of its three frames. If something about the log looks wrong, such as the dates, send that file: the raw bytes show exactly what the battery sent.</li>
+  <li><b>Reset</b> only clears the list on the screen. It does not clear anything in the battery.</li>
+</ul>
+
+<h2>11&nbsp; Saved views</h2>
+<p>
+  On <b>Live</b> and <b>Readings</b> you can keep your own arrangement of items.
+</p>
+<ol class="steps">
+  <li>Choose the <b>All</b> view. Click tiles (Live) or rows (Readings) to switch items off; faded ones are off.</li>
+  <li>Type a name in <b>View name</b> and press <b>Save view</b>. The name has to be new on that screen and different from the built-in views.</li>
+  <li>The view now appears in the <b>View</b> menu. Choose it any time.</li>
+  <li>To remove it, choose it and press <b>Delete view</b>. The app asks first.</li>
+</ol>
+<p>
+  Saved views, and the signals from the Explore screen, <b>survive closing the app</b>.
+  On a computer they are one small text file: on a Mac <code>~/Library/Application Support/Silence S01/views.txt</code>, on Windows <code>%APPDATA%\Silence S01\views.txt</code>.
+  In the browser they are kept on the ESP32 unit itself, so every phone and computer that opens the page sees the same views.
+  If the app cannot reach that storage it says so, and the views then last only until you close the app or page.
+</p>
+
+<h2 class="newpage">12&nbsp; On a phone</h2>
+<p>
+  When the window is narrow (a phone held upright), the app changes layout by itself. This happens on a computer too if you make the window narrow.
+</p>
+<div class="phones">
+  <figure><img src="images/phone-live.png" alt="The Live screen on a phone, with a tab bar at the bottom."><figcaption>Live on a phone.</figcaption></figure>
+  <figure><img src="images/phone-explore.png" alt="The Explore screen on a phone."><figcaption>Explore on a phone.</figcaption></figure>
+  <figure class="small"><img src="images/phone-more.png" alt="The More page listing Explore, Parameters and Event log."><figcaption>The More page.</figcaption></figure>
+</div>
+<ul>
+  <li>The menu becomes a <b>tab bar along the bottom</b>: Live, Readings, Flags, Frames and <b>More</b>. More leads to Explore, Parameters and the Event log.</li>
+  <li>The bar at the top keeps one <b>Connect / Disconnect</b> button and a <b>&hellip;</b> menu that holds the pack ID, the clock, the port box (on a computer), <b>Simulate</b> and the version.</li>
+  <li>The views on Live become a row of buttons; the chart's time spans become <b>1m 5m 10m 15m</b> with a <b>&hellip;</b> menu for Split, Reset, Save chart and Export data.</li>
+  <li>Frames become one small card per identifier, and details open as a sheet from the bottom. Tap <b>Close</b> to put it away.</li>
+</ul>
+
+<h2>13&nbsp; When something goes wrong</h2>
+<dl>
+  <dt>The port box says &ldquo;No serial port&rdquo; (or &ldquo;No device&rdquo;).</dt>
+  <dd>Check the adapter is plugged in, then wait a couple of seconds: the list refreshes by itself. On Windows the adapter may need its driver. In the browser, check you are on the <span class="name">S01-Monitor</span> WiFi.</dd>
+  <dt>It says Connected but nothing moves.</dt>
+  <dd>The scooter may be asleep (the bus goes quiet when it is off). Switch it on and watch the Frames screen: the counts should climb. If the numbers froze after working, Disconnect and Connect again.</dd>
+  <dt>&ldquo;The connection stopped unexpectedly.&rdquo;</dt>
+  <dd>The adapter was unplugged or the feed failed. Reconnect it and press Connect.</dd>
+  <dt>The Event log says the motor controller reported a fault.</dt>
+  <dd>The app stopped the read to be safe. Switch the scooter off and on again; that clears it. Then read the log again. If it happens every time, tell us which controller your scooter has (Sevcon or Votol) and what the dash shows.</dd>
+  <dt>The Event log says it &ldquo;stopped part way&rdquo; or &ldquo;came back out of order&rdquo;.</dt>
+  <dd>A page of records did not arrive, or a frame was lost. What was read is kept. Press Read Event Logs again.</dd>
+  <dt>A Read button says &ldquo;stopped answering&rdquo;.</dt>
+  <dd>The battery or the ECU did not reply. Try again; make sure the scooter is switched on.</dd>
+  <dt>The window is blank (desktop).</dt>
+  <dd>The graphics driver may not support OpenGL. Update the driver.</dd>
+  <dt>The browser page will not load.</dt>
+  <dd>Check you are on the unit's WiFi and use <span class="name">http://192.168.4.1/</span>. If you changed the page on the unit and it looks old, close it and open it again; on an iPhone, delete the Home Screen icon and add it again.</dd>
+  <dt>I saved a view or signal and it is gone.</dt>
+  <dd>If the app showed a message about the saved views, it could not reach its storage and the item lasted only for that session.</dd>
+  <dt>Windows or macOS refuses to open the app.</dt>
+  <dd>See &ldquo;Open the app&rdquo; in section 2. The program is not signed, which is why the warning appears.</dd>
+</dl>
+
+<h2>14&nbsp; Words used in this guide</h2>
+<dl>
+  <dt>CAN bus</dt><dd>The shared wire the scooter's parts use to talk to each other.</dd>
+  <dt>Frame</dt><dd>One short message on the bus: an identifier and up to 8 bytes of data.</dd>
+  <dt>Identifier (ID)</dt><dd>The number that says what kind of frame it is, written in hexadecimal, like <code>0x280</code>.</dd>
+  <dt>Byte, bit</dt><dd>A byte is one of the data values in a frame (0 to 255, shown as two hex digits). It is made of 8 bits, numbered 0 to 7; bit 0 is the smallest. Bytes are numbered from 0.</dd>
+  <dt>Hexadecimal (hex)</dt><dd>A way to write numbers with the digits 0 to 9 and A to F. <code>0A</code> is 10, <code>FF</code> is 255.</dd>
+  <dt>Decoded</dt><dd>The app knows what the frame's bytes mean and shows them as readings.</dd>
+  <dt>Marker</dt><dd>A note dropped at one moment, which also remembers what the bus said then.</dd>
+  <dt>Signal</dt><dd>Bytes of a frame read as a number with a scale and an offset, shown live.</dd>
+  <dt>Counter, clock</dt><dd>A byte that changes on almost every frame because it counts or keeps time. It tells you nothing about what the scooter is doing.</dd>
+  <dt>ECU</dt><dd>The scooter's main control unit.</dd>
+  <dt>CANable, slcan</dt><dd>A small USB adapter that connects a computer to a CAN bus, and the simple text protocol it speaks.</dd>
+  <dt>CSV</dt><dd>A plain spreadsheet file that Excel, Numbers and others open.</dd>
+</dl>
+
+<p class="meta" style="margin-top:22pt; color: var(--muted); font-size: 9pt">
+  Silence S01 Monitor @VERSION@. What changed in this and every earlier version is in <b>CHANGELOG.md</b>, in the same folder as this guide.
+</p>
+
+</body>
+</html>

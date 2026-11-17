@@ -1,0 +1,33 @@
+[package]
+name = "s01-monitor"
+version.workspace = true
+edition = "2021"
+description = "Live dashboard for a Silence S01"
+publish = false
+
+[dependencies]
+web-time = "1"
+
+# The local time on a Mac or Linux computer (src/clock.rs). It is already in the
+# build, because eframe and serialport use it.
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+eframe = "0.37"
+rfd = "0.15"
+serialport = "4.10"
+
+# The browser build. Only the glow renderer, and no bundled font set: the
+# app loads the one font it needs, which keeps the download small.
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+eframe = { version = "0.37", default-features = false, features = ["glow"] }
+wasm-bindgen-futures = "0.4"
+gloo-timers = { version = "0.3", features = ["futures"] }
+js-sys = "0.3"
+web-sys = { version = "0.3", features = [
+    "Window", "Document", "Location", "HtmlCanvasElement", "HtmlElement", "HtmlAnchorElement",
+    "HtmlInputElement", "Element", "Node", "Event", "EventTarget", "File", "FileList", "Blob",
+    "BlobPropertyBag", "Url", "WebSocket", "MessageEvent", "CloseEvent", "BinaryType",
+    "RequestInit", "RequestCache", "Response",
+] }

@@ -1,0 +1,19 @@
+[workspace]
+resolver = "2"
+members = ["s01-monitor"]
+
+# The one version for the whole project. The app, the browser page and the
+# ESP32 firmware all take it from here, and CHANGELOG.md says what each version
+# changed. Raise it with every change that alters behaviour, and add the matching
+# entry to CHANGELOG.md in the same commit (cargo test checks they agree).
+[workspace.package]
+version = "0.11.0"
+
+# Small download for the browser build: cargo build --profile web --target wasm32-unknown-unknown
+[profile.web]
+inherits = "release"
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

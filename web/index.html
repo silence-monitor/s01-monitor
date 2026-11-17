@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<!-- viewport-fit=cover lets the page use the whole screen on a phone with a notch;
+     the padding on body below keeps the content out from under it. -->
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Silence S01</title>
+<!-- "Add to Home Screen" on an iPhone then opens the page as an app, with none
+     of Safari's address bar or toolbars. -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Silence S01">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#101410">
+<link rel="apple-touch-icon" href="data:image/png;base64,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">
+<style>
+  html { height: 100%; background: #101410; }
+  body {
+    margin: 0; height: 100%; height: 100dvh; box-sizing: border-box;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    background: #101410; color: #9aa59c; font: 14px system-ui, sans-serif;
+    overflow: hidden; overscroll-behavior: none;
+    -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
+  }
+  canvas { display: block; width: 100%; height: 100%; }
+  #status { position: fixed; inset: 0; display: grid; place-items: center; pointer-events: none; }
+  #status.done { display: none; }
+</style>
+</head>
+<body>
+<canvas id="the_canvas_id"></canvas>
+<div id="status">Loading the monitor…</div>
+<script>
+  // Recording storage for a browser. A recording is kept in IndexedDB as it is
+  // made, in chunks of a few seconds, so a long recording does not sit in the
+  // page's memory and survives the page being closed or killed. Stopping builds
+  // the file from the chunks and downloads it (in several files if it is very
+  // large). The Rust side (platform.rs) calls these; if IndexedDB fails part
+  // way, the rest is kept in memory and the recording is still saved.
+  window.s01Rec = (() => {
+    "use strict";
+    const DB_NAME = "s01-recordings", CHUNKS = "chunks", META = "meta";
+    const PART_CHARS = 64 * 1024 * 1024;   // one downloaded file holds about this much
+    const KEEP_MS = 60 * 1000;             // chunks are kept this long after the download starts
+    const active = new Set();              // recordings begun in this page
+    const failed = {};                     // id -> message, once storage failed
+    const memory = {};                     // id -> Map(seq -> text) not yet stored
+    const sizes = {};                      // id -> { next, chars }
+    let dbPromise = null;
+    let queue = Promise.resolve();
+
+    const enqueue = (job) => { const run = queue.then(job); queue = run.catch(() => {}); return run; };
+    const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+    const done = (tx) => new Promise((resolve, reject) => {
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+      tx.onabort = () => reject(tx.error || new Error("aborted"));
+    });
+    const request = (r) => new Promise((resolve, reject) => {
+      r.onsuccess = () => resolve(r.result);
+      r.onerror = () => reject(r.error);
+    });
+    const fail = (id, err) => {
+      if (!failed[id]) {
+        failed[id] = "The browser would not store the recording (" + (err && err.name ? err.name : String(err)) +
+          "). The rest is kept in memory instead.";
+      }
+    };
+
+    function open() {
+      if (!dbPromise) {
+        dbPromise = new Promise((resolve, reject) => {
+          let req;
+          try { req = indexedDB.open(DB_NAME, 1); } catch (err) { reject(err); return; }
+          req.onupgradeneeded = () => {
+            const db = req.result;
+            db.createObjectStore(CHUNKS, { keyPath: ["id", "seq"] });
+            db.createObjectStore(META, { keyPath: "id" });
+          };
+          req.onsuccess = () => resolve(req.result);
+          req.onerror = () => reject(req.error || new Error("IndexedDB could not be opened"));
+          req.onblocked = () => reject(new Error("IndexedDB is blocked"));
+        });
+        dbPromise.catch(() => { dbPromise = null; });
+      }
+      return dbPromise;
+    }
+
+    function available() { return typeof indexedDB !== "undefined" && indexedDB !== null; }
+
+    function begin(id, name) {
+      active.add(id);
+      memory[id] = new Map();
+      sizes[id] = { next: 0, chars: 0 };
+      enqueue(async () => {
+        try {
+          const db = await open();
+          const tx = db.transaction([META], "readwrite");
+          tx.objectStore(META).put({ id, name, started: Date.now(), chunks: 0, chars: 0, done: false });
+          await done(tx);
+        } catch (err) { fail(id, err); }
+      });
+    }
+
+    function append(id, seq, text) {
+      const size = sizes[id] || (sizes[id] = { next: 0, chars: 0 });
+      const held = memory[id] || (memory[id] = new Map());
+      size.next = Math.max(size.next, seq + 1);
+      size.chars += text.length;
+      held.set(seq, text);
+      enqueue(async () => {
+        if (failed[id]) return;
+        try {
+          const db = await open();
+          const tx = db.transaction([CHUNKS, META], "readwrite");
+          tx.objectStore(CHUNKS).put({ id, seq, text });
+          const metaStore = tx.objectStore(META);
+          const get = metaStore.get(id);
+          get.onsuccess = () => {
+            const meta = get.result;
+            if (meta) {
+              meta.chunks = Math.max(meta.chunks, seq + 1);
+              meta.chars += text.length;
+              metaStore.put(meta);
+            }
+          };
+          await done(tx);
+          held.delete(seq);
+        } catch (err) { fail(id, err); }
+      });
+    }
+
+    function status(id) { return failed[id] || ""; }
+
+    function discardNow(id) {
+      return open().then((db) => {
+        const tx = db.transaction([CHUNKS, META], "readwrite");
+        tx.objectStore(CHUNKS).delete(IDBKeyRange.bound([id, 0], [id, Infinity]));
+        tx.objectStore(META).delete(id);
+        return done(tx);
+      }).catch(() => {}).then(() => { delete memory[id]; delete sizes[id]; active.delete(id); });
+    }
+
+    function partName(name, n) {
+      const dot = name.lastIndexOf(".");
+      return dot > 0 ? name.slice(0, dot) + "-part" + n + name.slice(dot) : name + "-part" + n;
+    }
+
+    function download(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), KEEP_MS);
+    }
+
+    // Builds the file from the stored chunks, then `finalText` (what the page
+    // still held when recording stopped), and downloads it. Resolves with a
+    // sentence for the screen.
+    function save(id, name, finalText) {
+      return enqueue(async () => {
+        finalText = finalText || "";
+        let db = null;
+        try { db = await open(); } catch (err) { fail(id, err); }
+        let next = 0, chars = 0;
+        if (active.has(id)) {
+          next = sizes[id].next; chars = sizes[id].chars;
+        } else if (db) {
+          const meta = await request(db.transaction([META]).objectStore(META).get(id));
+          if (!meta) return "That recording is no longer stored.";
+          next = meta.chunks; chars = meta.chars; name = name || meta.name;
+        } else {
+          return "The browser's storage could not be opened, so the recording cannot be recovered.";
+        }
+        const parts = Math.max(1, Math.ceil((chars + finalText.length) / PART_CHARS));
+        const held = memory[id] || new Map();
+        const names = [];
+        let blobParts = [], size = 0, number = 0, missing = 0;
+        const emit = async () => {
+          if (!blobParts.length) return;
+          number += 1;
+          const filename = parts > 1 ? partName(name, number) : name;
+          download(new Blob(blobParts, { type: "text/plain" }), filename);
+          names.push(filename);
+          blobParts = []; size = 0;
+          await sleep(600);
+        };
+        const add = async (text) => {
+          if (!blobParts.length && number > 0) blobParts.push("# continued from part " + number + "\n");
+          blobParts.push(text);
+          size += text.length;
+          if (size >= PART_CHARS) await emit();
+        };
+        try {
+          for (let seq = 0; seq < next; seq++) {
+            let text = held.get(seq);
+            if (text === undefined && db) {
+              const row = await request(db.transaction([CHUNKS]).objectStore(CHUNKS).get([id, seq]));
+              text = row ? row.text : undefined;
+            }
+            if (text === undefined) { missing += 1; continue; }
+            await add(text);
+          }
+          if (finalText) await add(finalText);
+          await emit();
+        } catch (err) {
+          return "Could not prepare the download (" + (err && err.name ? err.name : String(err)) + "). The recording is still stored; reload the page to try again.";
+        }
+        if (db) {
+          try {
+            const tx = db.transaction([META], "readwrite");
+            const store = tx.objectStore(META);
+            const meta = await request(store.get(id));
+            if (meta) { meta.done = true; meta.doneAt = Date.now(); store.put(meta); }
+            await done(tx);
+          } catch (err) { /* it will be cleaned up later */ }
+        }
+        setTimeout(() => discardNow(id), KEEP_MS);
+        if (!names.length) return "The recording was empty, so nothing was downloaded.";
+        const where = names.length === 1 ? "your downloads as " + names[0]
+          : "your downloads as " + names.length + " files, " + names[0] + " and the ones after it";
+        return missing ? where + " (" + missing + " pieces were missing)" : where;
+      });
+    }
+
+    function discard(id) { return enqueue(() => discardNow(id)); }
+
+    // Recordings left behind by a page that closed or was killed, not counting
+    // any begun in this page. Finished ones past their keep time are cleared.
+    function recoverable() {
+      return enqueue(async () => {
+        let db;
+        try { db = await open(); } catch (err) { return []; }
+        const all = await request(db.transaction([META]).objectStore(META).getAll());
+        const list = [];
+        for (const m of all) {
+          if (active.has(m.id)) continue;
+          if (m.done) {
+            if (Date.now() - (m.doneAt || 0) > 5 * KEEP_MS) await discardNow(m.id);
+          } else if (m.chunks > 0) {
+            list.push({ id: m.id, name: m.name, chars: m.chars, started: m.started });
+          } else {
+            await discardNow(m.id);
+          }
+        }
+        return list;
+      }).catch(() => []);
+    }
+
+    return { available, begin, append, status, save, discard, recoverable };
+  })();
+</script>
+<script type="module">
+  import init from "./s01-monitor.js";
+  const status = document.getElementById("status");
+  try {
+    await init({ module_or_path: "./s01-monitor_bg.wasm" });
+    status.classList.add("done");
+  } catch (err) {
+    // The runner reports the usual end of main as an exception; ignore that one.
+    if (!String(err).includes("Using exceptions for control flow")) {
+      status.textContent = "The monitor could not start: " + err;
+    } else {
+      status.classList.add("done");
+    }
+  }
+</script>
+</body>
+</html>
