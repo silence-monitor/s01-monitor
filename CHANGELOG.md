@@ -10,6 +10,15 @@ new version and an entry here, in the same commit. A new feature raises the
 middle number (0.3.0). A fix raises the last one (0.2.2). `cargo test` fails
 if the newest entry here does not match the version in `Cargo.toml`.
 
+## 0.11.2 (17 Nov 2026)
+
+**Fixed**
+- The browser page, and so the ESP32 image that carries it, no longer contains
+  the name of the folder it was built in or the home folder of whoever built
+  it. `scripts/build_web.sh` now replaces both in the paths the page remembers,
+  and `scripts/release.sh esp` looks inside the compressed page and stops if
+  either is still there.
+
 ## 0.11.1 (17 Nov 2026)
 
 **Fixed**

@@ -5,6 +5,9 @@
 #   optional: wasm-opt (binaryen) for a further ~15% off the download
 set -euo pipefail
 cd "$(dirname "$0")/.."
+# Paths a program remembers: replace the home folder and the project folder,
+# so the page (and the ESP32 image that carries it) names neither.
+export RUSTFLAGS="--remap-path-prefix=$HOME=/build --remap-path-prefix=$PWD=/src ${RUSTFLAGS:-}"
 cargo build --profile web --target wasm32-unknown-unknown -p s01-monitor
 rm -rf web/dist && mkdir -p web/dist
 wasm-bindgen --target web --no-typescript --out-dir web/dist \

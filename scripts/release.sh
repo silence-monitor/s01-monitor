@@ -352,6 +352,14 @@ PY
   echo "Firmware $size bytes of $limit ($((size * 100 / limit)) %)."
   [ "$(strings -a "$app" | grep -cx "$VERSION")" -gt 0 ] || fail "the firmware does not carry the version $VERSION (it was not rebuilt?)."
   for file in "$boot" "$table" "$app"; do check_no_user "$file" "$(basename "$file")"; done
+  # The browser page is inside the image, compressed, so look at the page itself.
+  local page_wasm
+  page_wasm=$(mktemp)
+  gunzip -c web/dist/s01-monitor_bg.wasm.gz > "$page_wasm"
+  check_no_user "$page_wasm" "the browser page"
+  grep -q -- "$HOME" "$page_wasm" && fail "the browser page contains the home folder path."
+  grep -q -- "$ROOT_REL" "$page_wasm" && fail "the browser page contains the project folder path."
+  rm -f "$page_wasm"
   echo "Version $VERSION is in the image; no user name in any file."
 
   step "ESP: assembling $folder"
