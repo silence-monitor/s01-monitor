@@ -59,7 +59,10 @@ step() { echo; echo "== $*"; }
 need() { for tool in "$@"; do command -v "$tool" >/dev/null || fail "'$tool' is not installed."; done; }
 
 LOCAL_USER=$(basename "$HOME")
-REMAP="--remap-path-prefix=$HOME=/build"
+# The project folder is inside the home folder. Remap it too (rustc lets the
+# last matching remap win), so the program does not carry the folder's name.
+ROOT_REL="${PWD#"$HOME"/}"
+REMAP="--remap-path-prefix=$HOME=/build --remap-path-prefix=$PWD=/src"
 DATE=$(date '+%e %b %Y' | sed 's/^ //')
 C_ORDER() { LC_ALL=C sort; }
 
@@ -207,6 +210,7 @@ build_windows() {
   [ -f "$exe" ] || fail "the build did not make $exe."
   check_no_user "$exe" "the exe"
   grep -q -- "$HOME" "$exe" && fail "the exe contains the home folder path."
+  grep -q -- "$ROOT_REL" "$exe" && fail "the exe contains the project folder path."
   echo "No user name or home folder in the exe."
 
   step "Windows: assembling $folder"
@@ -241,6 +245,7 @@ build_mac() {
   [ -f "$bin" ] || fail "the build did not make $bin."
   check_no_user "$bin" "the program"
   grep -q -- "$HOME" "$bin" && fail "the program contains the home folder path."
+  grep -q -- "$ROOT_REL" "$bin" && fail "the program contains the project folder path."
   echo "No user name or home folder in the program."
 
   step "Mac: making the .app"

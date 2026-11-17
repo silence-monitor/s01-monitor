@@ -10,6 +10,14 @@ new version and an entry here, in the same commit. A new feature raises the
 middle number (0.3.0). A fix raises the last one (0.2.2). `cargo test` fails
 if the newest entry here does not match the version in `Cargo.toml`.
 
+## 0.11.1 (17 Nov 2026)
+
+**Fixed**
+- The Windows program no longer contains the name of the folder it was built in.
+  The build now replaces the project folder as well as the home folder in the
+  paths a program remembers, and `scripts/release.sh` stops if either is still
+  in the finished program.
+
 ## 0.11.0 (17 Nov 2026)
 
 **Added (experimental)**
