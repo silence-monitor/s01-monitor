@@ -375,17 +375,26 @@ PY
   check_listing "$folder" "CHANGELOG.md|README.txt|SHA256SUMS|bootloader.bin|flash_args|partition-table.bin|s01-monitor-esp32.bin"
   (cd "$folder" && shasum -a 256 -c SHA256SUMS >/dev/null) || fail "the checksums do not match the copied files."
 
-  step "Done: ESP"
-  echo "Folder: $folder"
-  echo "It was built, not flashed. How to flash it later is in its README.txt."
+  step "ESP: zipping"
+  local zip="$folder.zip" n entries expected
+  n=$(name_for esp)
+  (cd "$dist" && zip -X -q -r "$n.zip" "$n")
+  entries=$(unzip -Z1 "$zip" | grep -v '/$' | C_ORDER | paste -sd'|' -)
+  expected=$(for f in CHANGELOG.md README.txt SHA256SUMS bootloader.bin flash_args partition-table.bin s01-monitor-esp32.bin; do echo "$n/$f"; done | C_ORDER | paste -sd'|' -)
+  [ "$entries" = "$expected" ] || fail "the zip holds '$entries', not just the three images, flash_args, SHA256SUMS, README and CHANGELOG."
+  for f in bootloader.bin partition-table.bin s01-monitor-esp32.bin; do
+    unzip -p "$zip" "$n/$f" | cmp -s - "$folder/$f" || fail "$f in the zip is not the one that was built."
+  done
+  report_zip "$folder" "$zip" "It was built, not flashed. How to flash it later is in its README.txt." \
+    "the three .bin files, flash_args, SHA256SUMS, README.txt, CHANGELOG.md"
 }
 
-report_zip() { # folder zip note
+report_zip() { # folder zip note [what the zip holds]
   step "Done"
   echo "Folder: $1"
   echo "Zip:    $2 ($(du -h "$2" | cut -f1))"
   echo "SHA-256: $(shasum -a 256 "$2" | cut -d' ' -f1)"
-  echo "The zip holds: the program, README.txt, User-Guide.pdf, CHANGELOG.md. Nothing else."
+  echo "The zip holds: ${4:-the program, README.txt, User-Guide.pdf, CHANGELOG.md}. Nothing else."
   echo "$3"
 }
 

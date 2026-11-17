@@ -10,6 +10,14 @@ new version and an entry here, in the same commit. A new feature raises the
 middle number (0.3.0). A fix raises the last one (0.2.2). `cargo test` fails
 if the newest entry here does not match the version in `Cargo.toml`.
 
+## 0.11.3 (17 Nov 2026)
+
+**Changed**
+- `scripts/release.sh esp` now also makes a zip of the ESP32 folder,
+  `s01-monitor-<version>-esp.zip`, like the Windows and Mac packages. It checks
+  what is in the zip and that the three images in it are the ones that were
+  built, and prints the zip's SHA-256.
+
 ## 0.11.2 (17 Nov 2026)
 
 **Fixed**
