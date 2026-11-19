@@ -10,6 +10,15 @@ new version and an entry here, in the same commit. A new feature raises the
 middle number (0.3.0). A fix raises the last one (0.2.2). `cargo test` fails
 if the newest entry here does not match the version in `Cargo.toml`.
 
+## 0.13.1 (19 Nov 2026)
+
+**Fixed**
+- A card with no file system the unit can read (new, or made by a computer for
+  another system such as exFAT) now says how big it is, and a card over 16 GB
+  is refused as too big **before** anything is formatted. Before, only a card
+  that had mounted was measured, so the unit would have offered to format a
+  large card it could not keep.
+
 ## 0.13.0 (19 Nov 2026)
 
 **Added**

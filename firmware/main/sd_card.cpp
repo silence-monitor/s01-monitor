@@ -207,6 +207,32 @@ static void read_space()
     xSemaphoreGive(g_info_lock);
 }
 
+// For a card that answered but has no file system we can read: asks the card
+// itself how big it is, so a card over 16 GB is refused before anything is
+// formatted, and the page can say what the card is. Returns 0 if it cannot tell.
+static uint64_t probe_card_bytes(const sdspi_device_config_t &slot)
+{
+    esp_err_t err = sdspi_host_init();
+    if (err != ESP_OK && err != ESP_ERR_INVALID_STATE) {
+        return 0;
+    }
+    uint64_t bytes = 0;
+    sdspi_dev_handle_t handle;
+    if (sdspi_host_init_device(&slot, &handle) == ESP_OK) {
+        sdmmc_host_t host = SDSPI_HOST_DEFAULT();
+        host.slot = handle;
+        host.max_freq_khz = SD_FREQ_KHZ;
+        sdmmc_card_t *card = static_cast<sdmmc_card_t *>(calloc(1, sizeof(sdmmc_card_t)));
+        if (card != nullptr && sdmmc_card_init(&host, card) == ESP_OK) {
+            bytes = static_cast<uint64_t>(card->csd.capacity) * card->csd.sector_size;
+        }
+        free(card);
+        sdspi_host_remove_device(handle);
+    }
+    sdspi_host_deinit();
+    return bytes;
+}
+
 // Tries to start the card. `format` means: make a new file system if there is
 // none (only ever asked for by a person). Returns the state it ended in.
 static State mount_card(bool format)
@@ -238,10 +264,21 @@ static State mount_card(bool format)
     sdmmc_card_t *card = nullptr;
     err = esp_vfs_fat_sdspi_mount(MOUNT, &host, &slot, &config, &card);
     if (err != ESP_OK) {
+        uint64_t probed = err == ESP_FAIL ? probe_card_bytes(slot) : 0;
         spi_bus_free(SD_HOST);
         g_bus_up = false;
         if (err == ESP_FAIL) {
-            set_message("The card has no file system the unit can read. It can be formatted.");
+            if (probed > MAX_CARD_BYTES) {
+                set_message("This card holds %.1f GB; only cards up to 16 GB are supported", static_cast<double>(probed) / 1e9);
+                return State::TooBig;
+            }
+            if (probed > 0) {
+                set_message("This %.1f GB card has no file system the unit can read (new, or made for another system). It can be formatted; everything on it would be erased.",
+                            static_cast<double>(probed) / 1e9);
+            } else {
+                set_message("The card has no file system the unit can read. It can be formatted; everything on it would be erased.");
+            }
+            ESP_LOGI(TAG, "a card answered but has no readable file system%s", probed > 0 ? " (size read)" : "");
             return State::NoFilesystem;
         }
         set_message("No card found");
