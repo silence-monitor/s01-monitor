@@ -10,6 +10,45 @@ new version and an entry here, in the same commit. A new feature raises the
 middle number (0.3.0). A fix raises the last one (0.2.2). `cargo test` fails
 if the newest entry here does not match the version in `Cargo.toml`.
 
+## 0.13.0 (19 Nov 2026)
+
+**Added**
+- **An SD card screen, for the ESP32 unit with the Atomic TF Card Base.** It
+  appears in the menu (under More on a phone) only in the browser page served by
+  a unit that has a card, that is the `grovecan-tfbase` firmware; the Atomic CAN
+  Base firmware and the Windows and Mac programs never show it. The card must be
+  16 GB or smaller. The screen shows what the unit sees of the card (ready, no
+  card, no usable file system, too big, ejected), its size, what is used and
+  free, and lets a person **eject** it, **format** it (after a confirmation that
+  says how much will be erased), browse its folders, **download** a file,
+  **upload** a file (with a progress bar), make a **folder** and **delete** a
+  file or folder (after a confirmation). Names are plain printable ASCII, up to
+  100 characters.
+- **The unit records the CAN bus to the card by itself.** A Start recording
+  button, and a setting to start one whenever the unit has a card (kept in the
+  unit, off to begin with). The recording is a text file in `/recordings` in the
+  app's own capture format, so a downloaded file replays with Replay a capture.
+  It is written by a task of its own, so a download cannot make it lose frames;
+  frames it could not keep are counted and noted in the file. The unit has no
+  clock, so the page sets it from the device that opens it: files are then named
+  by date and time, and before that they are numbered and their times count from
+  power-up.
+- The unit now answers `/info` (version, hardware, whether it has a card) and
+  `/time`, and the card endpoints under `/sd/`. Transfers run in a task apart
+  from the web server, one at a time, so a long download does not hold up the
+  live feed or the reads. Every request that changes something is refused unless
+  it comes from the unit's own page.
+- `scripts/web_bridge.py --sd FOLDER` pretends the unit has a card (the folder is
+  the card, see `scripts/fake_card.py`) so the screen can be tried with no
+  hardware, and `scripts/test_firmware_filter.sh` also runs a host test of the
+  path rules and the recorder's text.
+
+**Not tried yet**
+- None of this has been run on the unit with a real card. The pins (MOSI 19,
+  MISO 33, CLK 23, no chip select) are the ones printed on the base. What the
+  firmware has been through: it builds for both hardware versions, the host
+  tests pass, and the page has been used against the pretend card.
+
 ## 0.12.1 (19 Nov 2026)
 
 **Changed**

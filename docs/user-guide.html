@@ -86,10 +86,11 @@
     <li><b>8</b> Explore <span>working out what an unknown frame means</span></li>
     <li><b>9</b> Parameters <span>settings stored in the battery and the ECU</span></li>
     <li><b>10</b> Event log <span>what the battery has recorded</span></li>
-    <li><b>11</b> Saved views <span>keep your own arrangements</span></li>
-    <li><b>12</b> On a phone <span>the narrow layout</span></li>
-    <li><b>13</b> When something goes wrong <span>quick answers</span></li>
-    <li><b>14</b> Words used in this guide <span>a short glossary</span></li>
+    <li><b>11</b> SD card <span>the card on the unit: recording, files, format</span></li>
+    <li><b>12</b> Saved views <span>keep your own arrangements</span></li>
+    <li><b>13</b> On a phone <span>the narrow layout</span></li>
+    <li><b>14</b> When something goes wrong <span>quick answers</span></li>
+    <li><b>15</b> Words used in this guide <span>a short glossary</span></li>
   </ol>
 </section>
 
@@ -188,7 +189,7 @@ set in the unit's firmware), then open <span class="name">http://192.168.4.1/</s
 </figure>
 <dl>
   <dt>View</dt>
-  <dd>Chooses which tiles and chart lines are shown: <b>Pack</b>, <b>Ride</b>, <b>Charge</b>, <b>Drive</b> or <b>All</b>, plus any view you saved yourself (section 11).</dd>
+  <dd>Chooses which tiles and chart lines are shown: <b>Pack</b>, <b>Ride</b>, <b>Charge</b>, <b>Drive</b> or <b>All</b>, plus any view you saved yourself (section 12).</dd>
   <dt>Tiles</dt>
   <dd>The big number for each item, with a little line showing the last few seconds. Click one for its details.</dd>
   <dt>Stream</dt>
@@ -215,7 +216,7 @@ set in the unit's firmware), then open <span class="name">http://192.168.4.1/</s
 <ul>
   <li><b>View</b> chooses a group (<b>Pack, Cells, Scooter, Motor</b>), or <b>All</b>, or one of your saved views.</li>
   <li><b>Export readings&hellip;</b> saves what is shown as a spreadsheet file (CSV).</li>
-  <li>On the <b>All</b> view you can click rows to switch them off, then name the view and press <b>Save view</b> (section 11).
+  <li>On the <b>All</b> view you can click rows to switch them off, then name the view and press <b>Save view</b> (section 12).
       <b>Deselect all</b> / <b>Select all</b> flips every row at once.</li>
 </ul>
 
@@ -376,7 +377,7 @@ set in the unit's firmware), then open <span class="name">http://192.168.4.1/</s
 </table>
 <p>
   <b>Save signal</b> keeps it (up to 8). Each saved signal shows its current value, the raw number, the bytes, and a chart. <b>Show the last</b> sets how many minutes the charts show.
-  <b>Delete</b> removes a signal after asking. A signal cannot be edited: delete it and make it again. Signals are kept in the same place as your saved views (section 11)
+  <b>Delete</b> removes a signal after asking. A signal cannot be edited: delete it and make it again. Signals are kept in the same place as your saved views (section 12)
   and come back next time you open the app.
 </p>
 
@@ -441,7 +442,38 @@ set in the unit's firmware), then open <span class="name">http://192.168.4.1/</s
   <li><b>Reset</b> only clears the list on the screen. It does not clear anything in the battery.</li>
 </ul>
 
-<h2>11&nbsp; Saved views</h2>
+<h2 class="newpage">11&nbsp; SD card</h2>
+<p>
+  This screen is only in the <b>browser page served by the ESP32 unit</b>, and only when the unit has an SD card: an M5 ATOM Lite with a Unit CAN on its Grove port and an Atomic TF Card Base.
+  With any other hardware, and in the Windows and Mac programs, the menu has no <b>SD card</b> entry. On a phone it is under <b>More</b>.
+  The card has to be 16 GB or smaller.
+</p>
+<h3>The card</h3>
+<ul>
+  <li>The top card says what the unit sees: <b>Ready</b> (with the card's name, size, what is used and what is free), <b>No card found</b>, a card that has no file system the unit can read, a card that is too big, or <b>Ejected</b>. The unit looks for a card every few seconds, so one put in later appears by itself.</li>
+  <li><b>Eject&hellip;</b> stops any recording and lets go of the card, so it is safe to take out. <b>Use the card again</b> mounts it again.</li>
+  <li><b>Format&hellip;</b> erases everything on the card and makes a new FAT file system. The app asks first, says how much is on the card, and the card cannot be used for up to a minute. It is not offered while a recording is running or the unit is busy with another job.</li>
+  <li>There is no card-detect switch in the card base, so pulling a card out while it is in use can damage a file. Use <b>Eject</b> first. A card that stops answering is noticed within a few seconds and shown as not found.</li>
+</ul>
+<h3>Recording to the card</h3>
+<ul>
+  <li><b>Start recording</b> makes the unit write every frame it hears to a text file in the card's <span class="name">recordings</span> folder, in the same format this app records, so you can download the file and open it with <b>Replay a capture&hellip;</b> on the Frames screen. The file is started when the first frame arrives. A file that grows past 64 MB continues in a new one.</li>
+  <li>The line under the buttons shows the file, how many frames and how much has been written, and how many frames the unit could not keep (the unit says so in the file too). The unit's recording does not need a phone to stay connected.</li>
+  <li><b>Start recording by itself whenever the unit has a card</b> makes the unit start a recording at power-up. It stays on until you untick it. Stopping a recording by hand keeps it stopped until the card is put in again or you start one.</li>
+  <li>The unit has no clock of its own. It takes the time from the device that opens the page, and keeps counting until it is powered off. A recording started with the clock set is named from the date and time (<span class="name">rec-20261119-214501.log</span>) and carries that device's time of day. One started before any page has set the clock is numbered (<span class="name">rec-0001.log</span>) and its times count from power-up. If the clock is set while a recording runs, the unit starts a new file so the times do not jump.</li>
+</ul>
+<h3>Files</h3>
+<ul>
+  <li>The <b>Files</b> card browses the card: click a folder to open it, and click <b>Card</b> or a folder name above the list to go back. Each file has <b>Download</b> and <b>Delete&hellip;</b>; each folder has <b>Delete&hellip;</b>. Deleting asks first, a folder goes with everything in it, and it cannot be undone.</li>
+  <li><b>Download</b> hands the file to your browser, which saves it as it arrives. The file being recorded cannot be downloaded or deleted until the recording is stopped.</li>
+  <li><b>Upload a file here&hellip;</b> sends a file from this device to the folder you are in. A bar shows how far it has got. The unit writes it under a temporary name and gives it its real name only when all of it has arrived, so a cut-off upload leaves no half file. It refuses a file that will not fit.</li>
+  <li><b>Create folder</b> makes a folder in the folder you are in.</li>
+  <li>Names can use plain letters, digits, spaces and <code>. _ - ( )</code>, up to 100 characters. They cannot contain <code>\ / : * ? " &lt; &gt; |</code>, and cannot start or end with a space or end with a dot. The unit shows at most 300 items of a folder.</li>
+  <li>The unit does one transfer, delete or format at a time and says <b>busy</b> if you ask for a second. While it works on one, other pages show it too. Transfers share the unit's WiFi with the live feed, so a long download can slow the live screens a little, and a read of the event log or the parameters can take longer.</li>
+</ul>
+<div class="note"><b>Anyone on the unit's WiFi network can use this screen.</b> The network's password is the only protection, so anyone who knows it could format the card.</div>
+
+<h2>12&nbsp; Saved views</h2>
 <p>
   On <b>Live</b> and <b>Readings</b> you can keep your own arrangement of items.
 </p>
@@ -458,7 +490,7 @@ set in the unit's firmware), then open <span class="name">http://192.168.4.1/</s
   If the app cannot reach that storage it says so, and the views then last only until you close the app or page.
 </p>
 
-<h2 class="newpage">12&nbsp; On a phone</h2>
+<h2 class="newpage">13&nbsp; On a phone</h2>
 <p>
   When the window is narrow (a phone held upright), the app changes layout by itself. This happens on a computer too if you make the window narrow.
 </p>
@@ -468,13 +500,13 @@ set in the unit's firmware), then open <span class="name">http://192.168.4.1/</s
   <figure class="small"><img src="images/phone-more.png" alt="The More page listing Explore, Parameters and Event log."><figcaption>The More page.</figcaption></figure>
 </div>
 <ul>
-  <li>The menu becomes a <b>tab bar along the bottom</b>: Live, Readings, Flags, Frames and <b>More</b>. More leads to Explore, Parameters and the Event log.</li>
+  <li>The menu becomes a <b>tab bar along the bottom</b>: Live, Readings, Flags, Frames and <b>More</b>. More leads to Explore, Parameters and the Event log (and, on a unit with an SD card, the SD card).</li>
   <li>The bar at the top keeps one <b>Connect / Disconnect</b> button and a <b>&hellip;</b> menu that holds the pack ID, the clock, the port box (on a computer), <b>Simulate</b> and the version.</li>
   <li>The views on Live become a row of buttons; the chart's time spans become <b>1m 5m 10m 15m</b> with a <b>&hellip;</b> menu for Split, Reset, Save chart and Export data.</li>
   <li>Frames become one small card per identifier, and details open as a sheet from the bottom. Tap <b>Close</b> to put it away.</li>
 </ul>
 
-<h2>13&nbsp; When something goes wrong</h2>
+<h2>14&nbsp; When something goes wrong</h2>
 <dl>
   <dt>The port box says &ldquo;No serial port&rdquo; (or &ldquo;No device&rdquo;).</dt>
   <dd>Check the adapter is plugged in, then wait a couple of seconds: the list refreshes by itself. On Windows the adapter may need its driver. In the browser, check you are on the <span class="name">S01-Monitor</span> WiFi.</dd>
@@ -498,7 +530,7 @@ set in the unit's firmware), then open <span class="name">http://192.168.4.1/</s
   <dd>See &ldquo;Open the app&rdquo; in section 2. The program is not signed, which is why the warning appears.</dd>
 </dl>
 
-<h2>14&nbsp; Words used in this guide</h2>
+<h2>15&nbsp; Words used in this guide</h2>
 <dl>
   <dt>CAN bus</dt><dd>The shared wire the scooter's parts use to talk to each other.</dd>
   <dt>Frame</dt><dd>One short message on the bus: an identifier and up to 8 bytes of data.</dd>

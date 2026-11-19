@@ -1,2 +1,5 @@
 # Built for the M5 ATOM Lite with a Unit CAN on the Grove port and an Atomic TF Card Base.
 CONFIG_S01_BOARD_GROVE_CAN=y
+# File names longer than 8.3 on the card (the web page lists and uploads them).
+CONFIG_FATFS_LFN_HEAP=y
+CONFIG_FATFS_MAX_LFN=127

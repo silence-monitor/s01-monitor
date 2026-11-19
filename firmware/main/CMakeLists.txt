@@ -8,9 +8,19 @@ foreach(file index.html s01-monitor.js s01-monitor_bg.wasm.gz)
     endif()
 endforeach()
 
+set(S01_SOURCES "main.cpp")
+# The list of required components is worked out before the settings are known, so
+# the SD card ones are always listed. Without CONFIG_S01_HAS_SD nothing uses them
+# and the linker drops them.
+set(S01_REQUIRES driver esp_event esp_http_server esp_netif esp_wifi lwip nvs_flash esp_app_format
+                 fatfs sdmmc esp_driver_sdspi esp_driver_spi vfs esp_timer)
+if(CONFIG_S01_HAS_SD)
+    list(APPEND S01_SOURCES "sd_card.cpp")
+endif()
+
 idf_component_register(
-    SRCS "main.cpp"
+    SRCS ${S01_SOURCES}
     INCLUDE_DIRS "."
-    REQUIRES driver esp_event esp_http_server esp_netif esp_wifi lwip nvs_flash
+    REQUIRES ${S01_REQUIRES}
     EMBED_FILES "${WEB}/index.html" "${WEB}/s01-monitor.js" "${WEB}/s01-monitor_bg.wasm.gz"
 )

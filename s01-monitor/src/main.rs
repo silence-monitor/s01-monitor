@@ -15,6 +15,7 @@ mod params;
 mod platform;
 mod png;
 mod readings;
+mod sdcard;
 mod sim;
 mod signals;
 mod sink;

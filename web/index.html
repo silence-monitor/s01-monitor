@@ -251,6 +251,58 @@
 
     return { available, begin, append, status, save, discard, recoverable };
   })();
+
+  // Sends a file from this device to the unit's SD card. The browser streams the
+  // file, so a big one never sits in the app's memory. The app reads `state()`:
+  //   idle | sending|name|done|total | finished|name | failed|name|why
+  // A name the unit would refuse (it takes plain printable ASCII, no \ / : * ? " < > |,
+  // up to 100 characters, no space or dot at an end) is stopped here with the reason.
+  window.s01Sd = (() => {
+    let current = "idle";
+    function nameProblem(name) {
+      if (name.length === 0 || name.length > 100) return "a name can be 1 to 100 characters";
+      if (!/^[\x20-\x7e]+$/.test(name) || /[\\/:*?"<>|]/.test(name)) {
+        return "use plain letters, digits, spaces and . _ - ( ) only";
+      }
+      if (name === "." || name === ".." || /^ | $|\.$/.test(name)) {
+        return "a name cannot start or end with a space or end with a dot";
+      }
+      return "";
+    }
+    function pick(folder) {
+      const input = document.createElement("input");
+      input.type = "file";
+      input.style.display = "none";
+      input.onchange = () => {
+        const file = input.files && input.files[0];
+        input.remove();
+        if (!file) return;
+        const name = file.name;
+        const problem = nameProblem(name);
+        if (problem) {
+          current = "failed|" + name.replace(/\|/g, "/") + "|" + problem;
+          return;
+        }
+        const path = (folder === "/" ? "" : folder) + "/" + name;
+        const request = new XMLHttpRequest();
+        request.open("PUT", "/sd/file?path=" + encodeURIComponent(path));
+        request.upload.onprogress = (event) => {
+          current = "sending|" + name + "|" + event.loaded + "|" + (event.lengthComputable ? event.total : file.size);
+        };
+        request.onload = () => {
+          current = request.status >= 200 && request.status < 300
+            ? "finished|" + name
+            : "failed|" + name + "|" + ((request.responseText || "").trim() || "the unit answered " + request.status);
+        };
+        request.onerror = () => { current = "failed|" + name + "|the connection to the unit was lost"; };
+        current = "sending|" + name + "|0|" + file.size;
+        request.send(file);
+      };
+      document.body.appendChild(input);
+      input.click();
+    }
+    return { pick, state: () => current, clear: () => { current = "idle"; } };
+  })();
 </script>
 <script type="module">
   import init from "./s01-monitor.js";

@@ -8,6 +8,10 @@ so the browser runs the same decoder as the desktop app.
   scripts/web_bridge.py --serial /dev/cu.usbmodemXXXX   live bus from a CANable
   scripts/web_bridge.py --replay recording.log      play a capture, on a loop
 
+Add --sd FOLDER to pretend the unit has an SD card (the folder is the card; see
+fake_card.py), so the SD card screen can be tried with no hardware. With
+--sd-state nocard, nofs, toobig or ejected the card starts in that state.
+
 Then open http://localhost:8080 . This is a stand-in for the ESP32, which will
 serve the same page, the same /ws feed and the same /views (saved views) from
 the scooter.
@@ -23,12 +27,16 @@ import struct
 import sys
 import time
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from fake_card import FakeCard  # noqa: E402
+
 GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 DIST = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "web", "dist")
 LINE = re.compile(r"time:(\d+):(\d+):(\d+)\.(\d+)\s+RX:\s+STDID:([0-9A-Fa-f]+)\s+data:([0-9A-Fa-f ]*)")
 
 clients = set()
 serial_fd = None
+card = None  # a FakeCard when --sd is given
 
 # The saved views, kept in memory here (the ESP32 keeps them in flash). The
 # limits and answers match the firmware's /views.
@@ -70,6 +78,8 @@ def broadcast(text):
     # them into "?" (the app ignores such a line) instead of failing and
     # dropping everything that arrived with them.
     frame = ws_frame(text.encode("ascii", "replace"))
+    if card is not None:
+        card.log(text)
     for writer in list(clients):
         try:
             writer.write(frame)
@@ -169,6 +179,14 @@ async def handle(reader, writer):
             finally:
                 clients.discard(writer)
                 print(f"browser left ({len(clients)} open)", flush=True)
+        elif path.split("?", 1)[0] in ("/info", "/time") or path.startswith("/sd/"):
+            if card is not None:
+                await card.serve(reader, writer, method, path, headers, reply)
+            elif path.split("?", 1)[0] == "/info":
+                reply(writer, "200 OK", b"version bridge\nhardware web_bridge.py\nsd 0\n")
+            else:
+                reply(writer, "404 Not Found", b"no SD card here")
+            await writer.drain()
         elif path.split("?", 1)[0] == "/views":
             await serve_views(reader, writer, method, headers)
             await writer.drain()
@@ -270,7 +288,14 @@ async def main():
     parser.add_argument("--speed", type=float, default=1.0, help="replay speed")
     parser.add_argument("--port", type=int, default=8080)
     parser.add_argument("--host", default="127.0.0.1", help="use 0.0.0.0 to reach it from a phone")
+    parser.add_argument("--sd", metavar="FOLDER", help="pretend the unit has an SD card; this folder is the card")
+    parser.add_argument("--sd-state", default="ready", choices=["ready", "nocard", "nofs", "toobig", "ejected"],
+                        help="the state the pretend card starts in")
     args = parser.parse_args()
+    global card
+    if args.sd:
+        card = FakeCard(args.sd, args.sd_state)
+        print(f"pretend SD card in {card.root} ({args.sd_state})", flush=True)
     server = await asyncio.start_server(handle, args.host, args.port)
     print(f"open http://{args.host}:{args.port}", flush=True)
     task = replay(args.replay, args.speed) if args.replay else live(args.serial)

@@ -2,8 +2,13 @@ The hardware this image is for
 ------------------------------
 M5 ATOM Lite with an M5 Unit CAN plugged into the Grove port and an Atomic TF
 Card Base fitted under it. The CAN pins are GPIO 26 (TX, the Grove cable's
-yellow wire) and GPIO 32 (RX, the white wire). This version of the firmware
-assumes the TF Card Base is there but does not use the card yet.
+yellow wire) and GPIO 32 (RX, the white wire). The card's SPI pins are GPIO 19
+(MOSI), GPIO 33 (MISO) and GPIO 23 (CLK); the base has no chip select line.
+
+With a card of 16 GB or less in the base, the monitor page gets an SD card
+screen: card status, eject and format, a file browser with download, upload and
+delete, and a recording of the CAN bus to the card that can start by itself at
+power-up. The card has not been tried with this firmware on a bus yet.
 
 Flash this image only on that hardware. On an ATOM Lite with the Atomic CAN
 Base it would listen on the wrong pins and see nothing; that hardware has its

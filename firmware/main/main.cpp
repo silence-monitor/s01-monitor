@@ -18,6 +18,7 @@
 #include <initializer_list>
 
 #include "driver/twai.h"
+#include "esp_app_desc.h"
 #include "esp_event.h"
 #include "esp_http_server.h"
 #include "esp_log.h"
@@ -31,6 +32,7 @@
 #include "nvs.h"
 #include "nvs_flash.h"
 #include "request_filter.h"
+#include "sd_card.h"
 
 static const char *TAG = "s01";
 
@@ -112,6 +114,26 @@ static esp_err_t serve_asset(httpd_req_t *req)
         httpd_resp_set_hdr(req, "Content-Encoding", "gzip");
     }
     return httpd_resp_send(req, reinterpret_cast<const char *>(asset->start), asset->end - asset->start);
+}
+
+// ---- What this device is -----------------------------------------------------
+//
+// The browser app asks once, so it can show what the hardware has (the SD card
+// screen appears only when "sd 1" is reported).
+
+static esp_err_t info_get(httpd_req_t *req)
+{
+    char text[200];
+#ifdef CONFIG_S01_HAS_SD
+    const int has_sd = 1;
+#else
+    const int has_sd = 0;
+#endif
+    int n = snprintf(text, sizeof text, "version %s\nhardware %s\nsd %d\n", esp_app_get_description()->version,
+                     BOARD_NAME, has_sd);
+    httpd_resp_set_type(req, "text/plain; charset=utf-8");
+    httpd_resp_set_hdr(req, "Cache-Control", "no-store");
+    return httpd_resp_send(req, text, n);
 }
 
 // ---- Saved views ------------------------------------------------------------
@@ -340,7 +362,7 @@ static void send_line(const char *line, size_t len)
 // phone is on its WiFi. Browsers always say where the page came from in the
 // Origin header, so only a page served by this device (same host) may connect.
 // A tool that sends no Origin header is not a web page and is let through.
-static bool origin_is_ours(httpd_req_t *req)
+bool origin_is_ours(httpd_req_t *req)
 {
     char origin[96];
     esp_err_t found = httpd_req_get_hdr_value_str(req, "Origin", origin, sizeof origin);
@@ -443,6 +465,7 @@ static void can_task(void *)
         if (message.extd || message.rtr) {
             continue;
         }
+        sd_log_frame(message);  // for the recorder, if there is a card and it is recording
         char line[24];
         size_t n = 0;
         line[n++] = 't';
@@ -503,7 +526,7 @@ static void web_start()
 {
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
     config.stack_size = 8192;
-    config.max_uri_handlers = 10;  // four pages, /ws and /views twice
+    config.max_uri_handlers = 26;  // four pages, /ws, /views twice, /info and the SD card ones
     config.lru_purge_enable = true;
     config.send_wait_timeout = 10;
     config.recv_wait_timeout = 10;
@@ -537,6 +560,12 @@ static void web_start()
     views_write.method = HTTP_PUT;
     views_write.handler = views_put;
     ESP_ERROR_CHECK(httpd_register_uri_handler(g_server, &views_write));
+    static httpd_uri_t info = {};
+    info.uri = "/info";
+    info.method = HTTP_GET;
+    info.handler = info_get;
+    ESP_ERROR_CHECK(httpd_register_uri_handler(g_server, &info));
+    sd_register(g_server);
     static httpd_uri_t ws = {};
     ws.uri = "/ws";
     ws.method = HTTP_GET;
@@ -556,6 +585,7 @@ extern "C" void app_main(void)
 
     make_etag();
     clients_init();
+    sd_start();
     g_feed = xStreamBufferCreate(8192, 1);
     wifi_start();
     web_start();

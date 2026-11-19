@@ -12,13 +12,44 @@ scooter's CAN bus to it. Decoding happens in the browser.
   | Hardware | `sdkconfig` file | TX | RX |
   | --- | --- | --- | --- |
   | ATOM Lite + Atomic CAN Base (the default) | `sdkconfig.canbase.defaults` | GPIO 22 | GPIO 19 |
-  | ATOM Lite + Unit CAN on the Grove port + Atomic TF Card Base (assumed fitted; the firmware does not use the card yet) | `sdkconfig.grovecan-tfbase.defaults` | GPIO 26 (Grove yellow) | GPIO 32 (Grove white) |
+  | ATOM Lite + Unit CAN on the Grove port + Atomic TF Card Base (assumed fitted) | `sdkconfig.grovecan-tfbase.defaults` | GPIO 26 (Grove yellow) | GPIO 32 (Grove white) |
 
   The firmware cannot tell the two apart, so flash the image for the hardware.
   The boot log says which one it is ("Hardware: ..."). The Grove pins are the
   ones the Unit CAN page and an ATOM Lite example use; they have not been tried
   on a bus.
-* Image size: about 2.1 MB in a 3 MB app partition (4 MB flash, no OTA updates)
+* SD card (the `grovecan-tfbase` build only, `CONFIG_S01_HAS_SD`): the card is
+  mounted over SPI with MOSI GPIO 19, MISO GPIO 33 and CLK GPIO 23 and no chip
+  select (the base ties it to ground), at 10 MHz, FAT, 16 GB or smaller. The
+  browser page's SD card screen talks to these endpoints (all plain text;
+  everything that changes something is refused unless the request comes from
+  the unit's own page):
+
+  | Endpoint | What |
+  | --- | --- |
+  | `GET /info` | `version`, `hardware`, `sd 0/1` (the page shows the SD screen only if `sd 1`) |
+  | `POST /time?local=SECONDS` | sets the unit's clock from the page's local time |
+  | `GET /sd/status` | state (`ready`, `nocard`, `nofs`, `toobig`, `ejected`, `formatting`), card, space, the running job, the recording, free heap |
+  | `GET /sd/list?path=` | a folder, tab-separated, at most 300 items |
+  | `GET /sd/file?path=` | download (runs in the worker task) |
+  | `PUT /sd/file?path=` | upload, written as `.part` and renamed when whole |
+  | `POST /sd/delete?path=`, `/sd/mkdir?path=` | delete a file or a folder with its contents, make a folder |
+  | `POST /sd/format`, `/sd/eject`, `/sd/mount` | format (refused while recording), let go of the card, look again |
+  | `POST /sd/record?on=1/0`, `/sd/auto?on=1/0` | start or stop the recording, start it by itself when there is a card (kept in `nvs`) |
+
+  How it holds together: a manager task owns mounting and notices a lost card
+  (no card-detect pin, so it asks the card for its status every 2 s); anything
+  using the card is "inside" (a counter) and the manager unmounts only when
+  nobody is, after setting an abort flag the long jobs check; downloads,
+  uploads, deletes, format and eject run one at a time in a worker task, with
+  the request detached from the web server's single task
+  (`httpd_req_async_handler_begin`), so they never hold up the live feed; the
+  recorder has its own task fed by a 24 KB message buffer from the CAN task
+  (which never waits), and writes the app's own capture format (`time:` lines)
+  in 4 KB pieces, flushed every second, into `/recordings`. Paths and the
+  recorder's text are in `main/sd_paths.h`, tested on the computer by
+  `test/sd_paths_test.cpp`. **Not tried on a real card yet.**
+* Image size: about 2.1 MB in a 3 MB app partition (2.3 MB with the SD card code) (4 MB flash, no OTA updates)
 * Saved views: the custom views people create on the Live and Readings screens
   are kept on the device (`GET`/`PUT /views`, one small text list of at most
   6000 bytes in a 64 KB `nvs` partition), so they are the same in every

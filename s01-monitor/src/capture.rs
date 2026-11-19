@@ -349,6 +349,26 @@ mod tests {
     }
 
     #[test]
+    fn a_file_recorded_by_the_units_own_sd_card_replays_as_an_app_recording() {
+        // The lines firmware/main/sd_card.cpp writes (see sd_paths.h, can_line).
+        let text = "# recording from the unit's SD card, 250 kbit/s, started 2026-11-19 21:45:01\n\
+                    # times are the clock time of the device that set the unit's clock, or time since the unit started\n\
+                    time:21:45:01.000 RX: STDID:00280 data:11 00 00 00\n\
+                    # 3 frames were lost here (the recorder fell behind)\n\
+                    time:21:45:01.010 RX: STDID:007FF data:\n\
+                    time:21:45:01.020 RX: STDID:001AA data:00 01 AB FF 00 00 00 00\n";
+        let capture = parse(text).unwrap();
+        assert_eq!(capture.frames, 3);
+        assert_eq!(capture.length_ms, 20);
+        assert_eq!(capture.format, Format::Own);
+        let Item::Frame(frame) = &capture.entries[2].item else {
+            panic!("not a frame");
+        };
+        assert_eq!(frame.id, 0x1AA);
+        assert_eq!(frame.payload(), [0x00, 0x01, 0xAB, 0xFF, 0, 0, 0, 0]);
+    }
+
+    #[test]
     fn a_written_line_reads_back_the_same() {
         let frame = Frame::new(0x1AA, &[0x18, 0x01, 0xB0, 0xFF]);
         let line = frame_line(&frame, 63_930_991);

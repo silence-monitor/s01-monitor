@@ -26,4 +26,27 @@ menu "S01 Monitor"
         default 19 if S01_BOARD_CAN_BASE
         default 32 if S01_BOARD_GROVE_CAN
 
+    config S01_HAS_SD
+        bool "An SD card (Atomic TF Card Base) is fitted"
+        default y if S01_BOARD_GROVE_CAN
+        default n
+        help
+            Adds the SD card screen's web endpoints and the recorder. The base
+            ties the card's chip select to ground, so there is no CS pin.
+
+    config S01_SD_MOSI_GPIO
+        int
+        default 19
+        depends on S01_HAS_SD
+
+    config S01_SD_MISO_GPIO
+        int
+        default 33
+        depends on S01_HAS_SD
+
+    config S01_SD_CLK_GPIO
+        int
+        default 23
+        depends on S01_HAS_SD
+
 endmenu

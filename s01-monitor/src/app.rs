@@ -9,6 +9,7 @@ use eframe::egui::{
     Sense, Stroke, TextEdit, Vec2,
 };
 mod explore;
+mod sdscreen;
 
 use crate::capture::{self, Recorder};
 use crate::clock;
@@ -102,6 +103,8 @@ enum Screen {
     Explore,
     Parameters,
     Events,
+    /// The unit's SD card, only when the unit has one.
+    SdCard,
     /// The phone's fifth tab, which leads to Parameters and the event log.
     More,
 }
@@ -130,7 +133,7 @@ impl Form {
 /// Whether a tab of the phone's bottom bar is lit. "More" also covers the two
 /// screens it leads to.
 fn tab_lit(current: Screen, tab: Screen) -> bool {
-    tab == current || (tab == Screen::More && matches!(current, Screen::Explore | Screen::Parameters | Screen::Events))
+    tab == current || (tab == Screen::More && matches!(current, Screen::Explore | Screen::Parameters | Screen::Events | Screen::SdCard))
 }
 
 struct Detail {
@@ -171,6 +174,8 @@ pub struct MonitorApp {
     signal_defs: Vec<SignalDef>,
     /// The Explore screen's own state.
     explore: explore::ExploreState,
+    /// The unit's SD card screen: what the unit said and what is on screen.
+    sd: sdscreen::SdScreen,
     /// The confirmation to set the battery clock is open.
     confirm_clock: bool,
     /// When the battery clock was last set from here, so it is not set twice at once.
@@ -246,6 +251,7 @@ impl MonitorApp {
             reading_custom: Vec::new(),
             signal_defs: Vec::new(),
             explore: explore::ExploreState::default(),
+            sd: sdscreen::SdScreen::default(),
             confirm_clock: false,
             clock_set_at: None,
             confirm_delete: None,
@@ -435,6 +441,7 @@ impl eframe::App for MonitorApp {
         self.check_worker();
         self.take_opened();
         self.take_views();
+        self.sd_tick();
         self.sync_signals();
         let wait = if self.link == Link::Idle && self.view_pending == 0 { 400 } else { 80 };
         ctx.request_repaint_after(Duration::from_millis(wait));
@@ -520,6 +527,7 @@ impl eframe::App for MonitorApp {
                             Screen::Explore => self.explore(ui, &snap),
                             Screen::Parameters => self.parameters(ui, &snap),
                             Screen::Events => self.events(ui, &snap),
+                            Screen::SdCard => self.sd_card(ui),
                             Screen::More => self.more_page(ui),
                         }
                         });
@@ -553,6 +561,7 @@ impl eframe::App for MonitorApp {
                 }
             });
         self.delete_dialog(ui.ctx());
+        self.sd_dialog(ui.ctx());
         self.signal_dialog(ui.ctx());
         self.clock_dialog(ui.ctx());
     }
@@ -639,11 +648,15 @@ impl MonitorApp {
     fn more_page(&mut self, ui: &mut egui::Ui) {
         ui.label(RichText::new("More").size(18.0).color(INK));
         ui.add_space(8.0);
-        for (label, screen) in [
+        let mut entries = vec![
             ("Explore", Screen::Explore),
             ("Parameters", Screen::Parameters),
             ("Event log", Screen::Events),
-        ] {
+        ];
+        if self.sd.available {
+            entries.push(("SD card", Screen::SdCard));
+        }
+        for (label, screen) in entries {
             if nav_button(ui, label, false).clicked() {
                 self.screen = screen;
             }
@@ -672,7 +685,7 @@ impl MonitorApp {
             });
         });
         ui.add_space(12.0);
-        for (step, (label, screen)) in [
+        let mut entries = vec![
             ("Live", Screen::Live),
             ("Readings", Screen::Readings),
             ("Flags", Screen::Flags),
@@ -680,10 +693,11 @@ impl MonitorApp {
             ("Explore", Screen::Explore),
             ("Parameters", Screen::Parameters),
             ("Event log", Screen::Events),
-        ]
-        .into_iter()
-        .enumerate()
-        {
+        ];
+        if self.sd.available {
+            entries.push(("SD card", Screen::SdCard));
+        }
+        for (step, (label, screen)) in entries.into_iter().enumerate() {
             if step > 0 {
                 ui.add_space(6.0);
             }
@@ -4028,6 +4042,73 @@ mod tests {
                     assert!(snap.signal_traces[0].value.is_some());
                 }
             }
+        }
+    }
+
+    #[test]
+    fn the_sd_card_screen_draws_in_every_state_at_every_size() {
+        use crate::sdcard::{parse_listing, parse_status, Upload};
+        let states = [
+            "state nocard\nmessage No card found\n",
+            "state nofs\nmessage The card has no file system the unit can read. It can be formatted.\n",
+            "state toobig\nmessage This card holds 31.9 GB; only cards up to 16 GB are supported\n",
+            "state ejected\nmessage Ejected. It is safe to take the card out.\n",
+            "state formatting\nbusy format\n",
+            "state ready\ncard_name SD16G\ncard_type SDHC\ncard_bytes 15931539456\ntotal_bytes 15900000000\nfree_bytes 14000000000\nspace_known 1\nclock 1\nheap_free 90000\n",
+            "state ready\ncard_name SD16G\ncard_type SDHC\ncard_bytes 15931539456\nspace_known 0\nrecording 1\nrecord_wanted 1\nrecord_file /recordings/rec-0001.log\nrecord_frames 120000\nrecord_bytes 6000000\nrecord_lost 4\nauto 1\n",
+            "state ready\ncard_bytes 15931539456\ntotal_bytes 15900000000\nfree_bytes 100\nspace_known 1\nbusy upload\nbusy_done 5000\nbusy_total 90000\nrecord_wanted 1\n",
+        ];
+        let folder = "path /recordings\nd\told stuff\t0\t2026-11-01 10:00:00\nf\trec-20261119-214501.log\t6000000\t2026-11-19 21:45:01\nf\ta very long file name that keeps going and going.log\t12\t\nmore 1\n";
+        for (width, height) in [(360.0, 700.0), (390.0, 1500.0), (640.0, 800.0), (900.0, 700.0), (1180.0, 860.0)] {
+            for state in states {
+                for listing in [None, Some("path /\n"), Some(folder)] {
+                    let ctx = egui::Context::default();
+                    let cc = eframe::CreationContext::_new_kittest(ctx.clone());
+                    let mut app = MonitorApp::new(&cc);
+                    app.screen = Screen::SdCard;
+                    app.sd.available = true;
+                    app.sd.status = parse_status(state);
+                    app.sd.path = "/recordings".into();
+                    app.sd.listing = listing.map(parse_listing);
+                    for _ in 0..3 {
+                        draw_once(&mut app, &ctx, width, height);
+                    }
+                    // The notes, the progress bar, the typing checks and each question.
+                    app.sd.note = Some(("The card is full.".into(), true));
+                    app.sd.unreachable = true;
+                    app.sd.new_folder = "bad/name".into();
+                    app.sd.upload = Upload::Sending { name: "big.bin".into(), done: 10, total: 100 };
+                    draw_once(&mut app, &ctx, width, height);
+                    app.sd.upload = Upload::Idle;
+                    app.sd.note = Some(("Deleted a.log.".into(), false));
+                    app.sd.new_folder = "ok name".into();
+                    for confirm in [
+                        sdscreen::Confirm::Format,
+                        sdscreen::Confirm::Eject,
+                        sdscreen::Confirm::Delete { path: "/recordings/old stuff".into(), dir: true },
+                        sdscreen::Confirm::Delete { path: "/a.log".into(), dir: false },
+                    ] {
+                        app.sd.confirm = Some(confirm);
+                        draw_once(&mut app, &ctx, width, height);
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn the_sd_card_entry_is_in_the_menus_only_when_the_unit_has_a_card() {
+        let ctx = egui::Context::default();
+        let cc = eframe::CreationContext::_new_kittest(ctx.clone());
+        let mut app = MonitorApp::new(&cc);
+        assert!(!app.sd.available);
+        assert!(tab_lit(Screen::SdCard, Screen::More));
+        for width in [390.0, 1180.0] {
+            app.screen = Screen::More;
+            draw_once(&mut app, &ctx, width, 900.0);
+            app.sd.available = true;
+            draw_once(&mut app, &ctx, width, 900.0);
+            app.sd.available = false;
         }
     }
 
