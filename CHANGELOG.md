@@ -10,6 +10,17 @@ new version and an entry here, in the same commit. A new feature raises the
 middle number (0.3.0). A fix raises the last one (0.2.2). `cargo test` fails
 if the newest entry here does not match the version in `Cargo.toml`.
 
+## 0.12.1 (19 Nov 2026)
+
+**Changed**
+- The ESP32 package for the Unit CAN on the Grove port is now called
+  `s01-monitor-<version>-esp-grovecan-tfbase`, because that version assumes an
+  Atomic TF Card Base is fitted under the ATOM Lite. Its settings file is
+  `firmware/sdkconfig.grovecan-tfbase.defaults`, its README says so, and its
+  boot log reads "Hardware: M5 ATOM Lite + Unit CAN (Grove) + TF Card Base".
+  Nothing else changed: the CAN pins are the same (GPIO 26 and 32), and the
+  firmware still does not use the card.
+
 ## 0.12.0 (19 Nov 2026)
 
 **Added**

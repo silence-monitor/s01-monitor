@@ -1,2 +1,0 @@
-# Built for the M5 ATOM Lite with a Unit CAN on the Grove port.
-CONFIG_S01_BOARD_GROVE_CAN=y

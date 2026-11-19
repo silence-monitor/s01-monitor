@@ -42,7 +42,7 @@ static const char *TAG = "s01";
 static constexpr gpio_num_t CAN_TX = static_cast<gpio_num_t>(CONFIG_S01_CAN_TX_GPIO);
 static constexpr gpio_num_t CAN_RX = static_cast<gpio_num_t>(CONFIG_S01_CAN_RX_GPIO);
 #ifdef CONFIG_S01_BOARD_GROVE_CAN
-static constexpr const char *BOARD_NAME = "M5 ATOM Lite + Unit CAN (Grove)";
+static constexpr const char *BOARD_NAME = "M5 ATOM Lite + Unit CAN (Grove) + TF Card Base";
 #else
 static constexpr const char *BOARD_NAME = "M5 ATOM Lite + Atomic CAN Base";
 #endif

@@ -12,7 +12,7 @@ menu "S01 Monitor"
             bool "M5 ATOM Lite + Atomic CAN Base (CAN on the base: TX 22, RX 19)"
 
         config S01_BOARD_GROVE_CAN
-            bool "M5 ATOM Lite + Unit CAN on the Grove port (TX 26, RX 32); an Atomic TF Card Base may sit underneath"
+            bool "M5 ATOM Lite + Unit CAN on the Grove port (TX 26, RX 32) + Atomic TF Card Base (assumed fitted)"
 
     endchoice
 

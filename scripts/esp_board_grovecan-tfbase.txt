@@ -1,9 +1,9 @@
 The hardware this image is for
 ------------------------------
-M5 ATOM Lite with an M5 Unit CAN plugged into the Grove port. The CAN pins are
-GPIO 26 (TX, the Grove cable's yellow wire) and GPIO 32 (RX, the white wire).
-An Atomic TF Card Base may be fitted under the ATOM Lite; this version of the
-firmware does not use the card yet.
+M5 ATOM Lite with an M5 Unit CAN plugged into the Grove port and an Atomic TF
+Card Base fitted under it. The CAN pins are GPIO 26 (TX, the Grove cable's
+yellow wire) and GPIO 32 (RX, the white wire). This version of the firmware
+assumes the TF Card Base is there but does not use the card yet.
 
 Flash this image only on that hardware. On an ATOM Lite with the Atomic CAN
 Base it would listen on the wrong pins and see nothing; that hardware has its

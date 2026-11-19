@@ -9,7 +9,7 @@
 #                             (both zips carry the user guide, a PDF)
 #                   esp     : two packages, one per hardware, each a folder and a zip:
 #                             dist-esp/s01-monitor-<version>-esp-canbase   (ATOM Lite + Atomic CAN Base)
-#                             dist-esp/s01-monitor-<version>-esp-grovecan  (ATOM Lite + Unit CAN on the Grove port)
+#                             dist-esp/s01-monitor-<version>-esp-grovecan-tfbase  (ATOM Lite + Unit CAN on the Grove port + TF Card Base)
 #                   all     : all three
 #   --dist DIR      put the output in DIR instead of dist-<target>
 #   --skip-tests    do not run the tests first
@@ -76,19 +76,19 @@ name_for() {
   esac
 }
 # The ESP32 has one package per hardware.
-ESP_VARIANTS=(canbase grovecan)
+ESP_VARIANTS=(canbase grovecan-tfbase)
 esp_name() { echo "s01-monitor-$VERSION-esp-$1"; }
 esp_label() {
   case "$1" in
     canbase) echo "ESP32 firmware, ATOM Lite + Atomic CAN Base" ;;
-    grovecan) echo "ESP32 firmware, ATOM Lite + Unit CAN (Grove)" ;;
+    grovecan-tfbase) echo "ESP32 firmware, ATOM Lite + Unit CAN (Grove) + TF Card Base" ;;
   esac
 }
 # The name the image carries in its boot log, and the other one it must not carry.
 esp_board_in() {
   case "$1" in
     canbase) echo "M5 ATOM Lite + Atomic CAN Base" ;;
-    grovecan) echo "M5 ATOM Lite + Unit CAN (Grove)" ;;
+    grovecan-tfbase) echo "M5 ATOM Lite + Unit CAN (Grove) + TF Card Base" ;;
   esac
 }
 

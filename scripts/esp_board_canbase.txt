@@ -5,5 +5,5 @@ GPIO 19 (RX).
 
 Flash this image only on that hardware. On an ATOM Lite with a Unit CAN on the
 Grove port it would listen on the wrong pins and see nothing; that hardware has
-its own package (the one with "grovecan" in its name). Every image prints the
+its own package (the one with "grovecan-tfbase" in its name). Every image prints the
 hardware it was built for in the boot log ("Hardware: ...").

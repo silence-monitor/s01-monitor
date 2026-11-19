@@ -12,7 +12,7 @@ scooter's CAN bus to it. Decoding happens in the browser.
   | Hardware | `sdkconfig` file | TX | RX |
   | --- | --- | --- | --- |
   | ATOM Lite + Atomic CAN Base (the default) | `sdkconfig.canbase.defaults` | GPIO 22 | GPIO 19 |
-  | ATOM Lite + Unit CAN on the Grove port (an Atomic TF Card Base may sit under the ATOM; the firmware does not use the card yet) | `sdkconfig.grovecan.defaults` | GPIO 26 (Grove yellow) | GPIO 32 (Grove white) |
+  | ATOM Lite + Unit CAN on the Grove port + Atomic TF Card Base (assumed fitted; the firmware does not use the card yet) | `sdkconfig.grovecan-tfbase.defaults` | GPIO 26 (Grove yellow) | GPIO 32 (Grove white) |
 
   The firmware cannot tell the two apart, so flash the image for the hardware.
   The boot log says which one it is ("Hardware: ..."). The Grove pins are the
@@ -45,13 +45,13 @@ scooter's CAN bus to it. Decoding happens in the browser.
        idf.py set-target esp32
        idf.py -p /dev/cu.usbserial-XXXX -b 115200 flash monitor
 
-   For the Unit CAN on the Grove port, use its own build folder and settings so
+   For the Unit CAN on the Grove port (with the TF Card Base), use its own build folder and settings so
    the two builds never mix:
 
-       idf.py -B build-grovecan -D SDKCONFIG=build-grovecan/sdkconfig \
-         -D "SDKCONFIG_DEFAULTS=sdkconfig.defaults;sdkconfig.grovecan.defaults" \
+       idf.py -B build-grovecan-tfbase -D SDKCONFIG=build-grovecan-tfbase/sdkconfig \
+         -D "SDKCONFIG_DEFAULTS=sdkconfig.defaults;sdkconfig.grovecan-tfbase.defaults" \
          build
-       idf.py -B build-grovecan -D SDKCONFIG=build-grovecan/sdkconfig \
+       idf.py -B build-grovecan-tfbase -D SDKCONFIG=build-grovecan-tfbase/sdkconfig \
          -p /dev/cu.usbserial-XXXX -b 115200 flash monitor
 
    `scripts/release.sh esp` (from the project folder) builds both versions and
