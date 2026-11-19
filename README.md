@@ -18,8 +18,8 @@ and the notes on what is on that bus.
 - **A desktop app** (Windows and macOS) written in Rust with `egui`. It talks
   to the scooter through a CANable USB adapter running slcan firmware.
 - **The same app in a browser**, compiled to WebAssembly and served by a small
-  ESP32 unit (an M5 ATOM Lite with an Atomic CAN Base) that sits on the
-  scooter and makes its own WiFi network. Open the page on a phone.
+  ESP32 unit (an M5 ATOM Lite with an Atomic CAN Base, or with a Unit CAN on
+  its Grove port) that sits on the scooter and makes its own WiFi network. Open the page on a phone.
 - **Live, Readings, Flags, Frames, Explore, Parameters and Event log screens**:
   pack voltage and current, state of charge, the cells, speed and range, the
   on/off signals, every frame on the bus, tools for working out unknown frames,

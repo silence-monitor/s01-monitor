@@ -1,0 +1,29 @@
+menu "S01 Monitor"
+
+    choice S01_BOARD
+        prompt "Hardware the image is built for"
+        default S01_BOARD_CAN_BASE
+        help
+            Which CAN adapter the M5 ATOM Lite is wired to. This only sets the
+            two CAN pins. The two adapters cannot be told apart by the
+            firmware, so flash the image that matches the hardware.
+
+        config S01_BOARD_CAN_BASE
+            bool "M5 ATOM Lite + Atomic CAN Base (CAN on the base: TX 22, RX 19)"
+
+        config S01_BOARD_GROVE_CAN
+            bool "M5 ATOM Lite + Unit CAN on the Grove port (TX 26, RX 32); an Atomic TF Card Base may sit underneath"
+
+    endchoice
+
+    config S01_CAN_TX_GPIO
+        int
+        default 22 if S01_BOARD_CAN_BASE
+        default 26 if S01_BOARD_GROVE_CAN
+
+    config S01_CAN_RX_GPIO
+        int
+        default 19 if S01_BOARD_CAN_BASE
+        default 32 if S01_BOARD_GROVE_CAN
+
+endmenu

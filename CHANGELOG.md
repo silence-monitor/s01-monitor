@@ -10,6 +10,30 @@ new version and an entry here, in the same commit. A new feature raises the
 middle number (0.3.0). A fix raises the last one (0.2.2). `cargo test` fails
 if the newest entry here does not match the version in `Cargo.toml`.
 
+## 0.12.0 (19 Nov 2026)
+
+**Added**
+- **The ESP32 firmware now supports a second piece of hardware: an M5 ATOM Lite
+  with a Unit CAN on its Grove port.** An Atomic TF Card Base may be fitted
+  under the ATOM Lite; the firmware does not use the card yet. The Unit CAN
+  uses GPIO 26 for transmit (the Grove cable's yellow wire) and GPIO 32 for
+  receive (white). These pins come from the M5 documentation and an ATOM Lite
+  example and have **not been tried on a bus yet**. The first version, an ATOM
+  Lite with the Atomic CAN Base (GPIO 22 and 19), is unchanged. The firmware
+  cannot tell the two apart, so each has its own image. The hardware is chosen
+  when the firmware is built (`firmware/main/Kconfig.projbuild` and the two
+  `sdkconfig.*.defaults` files), and the boot log says which one it is
+  ("Hardware: ...").
+
+**Changed**
+- `scripts/release.sh esp` now makes two ESP32 packages, each a folder and a
+  zip: `s01-monitor-<version>-esp-canbase` (ATOM Lite + Atomic CAN Base) and
+  `s01-monitor-<version>-esp-grovecan` (ATOM Lite + Unit CAN on the Grove
+  port). Each README says which hardware it is for. The script checks that an
+  image names its own hardware and not the other one. These builds use their own
+  folders under `firmware/build-release/`, so they no longer touch the build
+  folder used by a person's own `idf.py`.
+
 ## 0.11.3 (17 Nov 2026)
 
 **Changed**

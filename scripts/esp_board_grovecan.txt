@@ -1,0 +1,17 @@
+The hardware this image is for
+------------------------------
+M5 ATOM Lite with an M5 Unit CAN plugged into the Grove port. The CAN pins are
+GPIO 26 (TX, the Grove cable's yellow wire) and GPIO 32 (RX, the white wire).
+An Atomic TF Card Base may be fitted under the ATOM Lite; this version of the
+firmware does not use the card yet.
+
+Flash this image only on that hardware. On an ATOM Lite with the Atomic CAN
+Base it would listen on the wrong pins and see nothing; that hardware has its
+own package (the one with "canbase" in its name). Every image prints the
+hardware it was built for in the boot log ("Hardware: ...").
+
+A loose 120 ohm resistor comes in the Unit CAN's box. Leave it out on the
+scooter: the scooter's bus is already terminated.
+
+This pin choice has not been tried on a bus yet. If the monitor shows no
+frames with the Unit CAN connected, the CAN pins are the first thing to check.

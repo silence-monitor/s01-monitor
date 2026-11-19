@@ -1,4 +1,5 @@
-// S01 monitor firmware for an M5 ATOM Lite with the Atomic CAN Base.
+// S01 monitor firmware for an M5 ATOM Lite, with either the Atomic CAN Base or a
+// Unit CAN on the Grove port (chosen when it is built, see Kconfig.projbuild).
 //
 // It does four things:
 //   1. starts a WiFi network of its own,
@@ -35,8 +36,16 @@ static const char *TAG = "s01";
 
 // ---- Settings ---------------------------------------------------------------
 
-static constexpr gpio_num_t CAN_TX = GPIO_NUM_22;  // Atomic CAN Base TX
-static constexpr gpio_num_t CAN_RX = GPIO_NUM_19;  // Atomic CAN Base RX
+// The CAN pins and the hardware's name come from the board chosen at build time
+// (idf.py menuconfig, "S01 Monitor"): the Atomic CAN Base uses GPIO 22 and 19,
+// a Unit CAN on the Grove port uses GPIO 26 and 32.
+static constexpr gpio_num_t CAN_TX = static_cast<gpio_num_t>(CONFIG_S01_CAN_TX_GPIO);
+static constexpr gpio_num_t CAN_RX = static_cast<gpio_num_t>(CONFIG_S01_CAN_RX_GPIO);
+#ifdef CONFIG_S01_BOARD_GROVE_CAN
+static constexpr const char *BOARD_NAME = "M5 ATOM Lite + Unit CAN (Grove)";
+#else
+static constexpr const char *BOARD_NAME = "M5 ATOM Lite + Atomic CAN Base";
+#endif
 static constexpr const char *AP_SSID = "S01-Monitor";
 static constexpr const char *AP_PASSWORD = "silence01";  // 8 characters or more
 static constexpr int AP_CHANNEL = 6;
@@ -409,6 +418,7 @@ static void can_init()
     twai_filter_config_t filter = TWAI_FILTER_CONFIG_ACCEPT_ALL();
     ESP_ERROR_CHECK(twai_driver_install(&general, &timing, &filter));
     ESP_ERROR_CHECK(twai_start());
+    ESP_LOGI(TAG, "Hardware: %s", BOARD_NAME);
     ESP_LOGI(TAG, "CAN started at 250 kbit/s (TX GPIO%d, RX GPIO%d)", CAN_TX, CAN_RX);
 }
 

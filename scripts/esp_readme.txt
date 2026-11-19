@@ -1,10 +1,12 @@
-This folder is a finished firmware image for the M5 ATOM Lite (ESP32) with the
-Atomic CAN Base. The monitor web page is inside it. It makes the WiFi network
+This folder is a finished firmware image for the M5 ATOM Lite (ESP32). The
+monitor web page is inside it. It makes the WiFi network
 "S01-Monitor" and serves the page at http://192.168.4.1/. It listens on the
 CAN bus at 250 kbit/s and sends only what the app needs: its read requests, the
 message that sets the battery clock (a person presses a button to send it), and
 the two messages that switch the scooter's debug mode on and off (only when a person switches debug mode on in the app,
 and off again when they switch it off or the app disconnects). Every other message is refused by the unit itself.
+
+@BOARD@
 
 Connecting to it
 ----------------

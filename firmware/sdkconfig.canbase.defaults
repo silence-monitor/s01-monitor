@@ -1,0 +1,2 @@
+# Built for the M5 ATOM Lite with the Atomic CAN Base (the default).
+CONFIG_S01_BOARD_CAN_BASE=y

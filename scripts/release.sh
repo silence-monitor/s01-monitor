@@ -7,7 +7,9 @@
 #   TARGET          windows : dist-windows/s01-monitor-<version>-windows.zip
 #                   mac     : dist-mac/s01-monitor-<version>-mac-arm64.zip (a .app)
 #                             (both zips carry the user guide, a PDF)
-#                   esp     : dist-esp/s01-monitor-<version>-esp/ (the .bin files)
+#                   esp     : two packages, one per hardware, each a folder and a zip:
+#                             dist-esp/s01-monitor-<version>-esp-canbase   (ATOM Lite + Atomic CAN Base)
+#                             dist-esp/s01-monitor-<version>-esp-grovecan  (ATOM Lite + Unit CAN on the Grove port)
 #                   all     : all three
 #   --dist DIR      put the output in DIR instead of dist-<target>
 #   --skip-tests    do not run the tests first
@@ -71,7 +73,22 @@ name_for() {
   case "$1" in
     windows) echo "s01-monitor-$VERSION-windows" ;;
     mac) echo "s01-monitor-$VERSION-mac-arm64" ;;
-    esp) echo "s01-monitor-$VERSION-esp" ;;
+  esac
+}
+# The ESP32 has one package per hardware.
+ESP_VARIANTS=(canbase grovecan)
+esp_name() { echo "s01-monitor-$VERSION-esp-$1"; }
+esp_label() {
+  case "$1" in
+    canbase) echo "ESP32 firmware, ATOM Lite + Atomic CAN Base" ;;
+    grovecan) echo "ESP32 firmware, ATOM Lite + Unit CAN (Grove)" ;;
+  esac
+}
+# The name the image carries in its boot log, and the other one it must not carry.
+esp_board_in() {
+  case "$1" in
+    canbase) echo "M5 ATOM Lite + Atomic CAN Base" ;;
+    grovecan) echo "M5 ATOM Lite + Unit CAN (Grove)" ;;
   esac
 }
 
@@ -89,10 +106,17 @@ NEWEST=$(grep -m1 '^## ' CHANGELOG.md | sed -E 's/^## +([^ ]+).*/\1/')
 [ "$NEWEST" = "$VERSION" ] || fail "the newest CHANGELOG.md entry is '$NEWEST', but the version is $VERSION."
 
 for t in "${TARGETS[@]}"; do
-  folder="$(dist_for "$t")/$(name_for "$t")"
-  if [ "$FORCE" -eq 0 ] && { [ -e "$folder" ] || [ -e "$folder.zip" ]; }; then
-    fail "$folder already exists. Use --force to replace it, or raise the version."
+  if [ "$t" = esp ]; then
+    names=(); for v in "${ESP_VARIANTS[@]}"; do names+=("$(esp_name "$v")"); done
+  else
+    names=("$(name_for "$t")")
   fi
+  for n in "${names[@]}"; do
+    folder="$(dist_for "$t")/$n"
+    if [ "$FORCE" -eq 0 ] && { [ -e "$folder" ] || [ -e "$folder.zip" ]; }; then
+      fail "$folder already exists. Use --force to replace it, or raise the version."
+    fi
+  done
 done
 
 if [ "$ALLOW_DIRTY" -eq 0 ]; then
@@ -316,18 +340,29 @@ PLIST
 
 # --- ESP32 --------------------------------------------------------------
 build_esp() {
-  local dist folder
-  dist=$(dist_for esp); folder="$dist/$(name_for esp)"
-  step "ESP: building the browser page"
+  local dist
+  dist=$(dist_for esp)
+  step "ESP: building the browser page (once, for both)"
   scripts/build_web.sh 2>&1 | tail -n 5 || fail "the browser page did not build."
+  for variant in "${ESP_VARIANTS[@]}"; do
+    build_esp_variant "$variant" "$dist"
+  done
+  step "Done: ESP"
+  echo "Built, not flashed. Flash the package that matches the hardware; how is in its README.txt."
+}
 
-  step "ESP: building the firmware (not flashing)"
+build_esp_variant() { # variant dist
+  local variant="$1" dist="$2" folder n
+  n=$(esp_name "$variant"); folder="$dist/$n"
+  step "ESP ($variant): building the firmware (not flashing)"
+  # Each hardware has its own build folder and settings file under firmware/build-release,
+  # so these builds never touch the one a person's own idf.py uses.
   # idf.py needs its own environment; a fresh shell keeps it out of this one.
-  bash -c 'set +u; . "$1" >/dev/null 2>&1 || { echo "could not load the ESP-IDF environment" >&2; exit 1; }; cd firmware && idf.py build' _ "$IDF_EXPORT" 2>&1 | tail -n 12 || fail "the firmware did not build."
-  local build=firmware/build
+  bash -c 'set +u; . "$1" >/dev/null 2>&1 || { echo "could not load the ESP-IDF environment" >&2; exit 1; }; cd firmware && idf.py -B "build-release/$2" -D "SDKCONFIG=$PWD/build-release/$2/sdkconfig" -D "SDKCONFIG_DEFAULTS=sdkconfig.defaults;sdkconfig.$2.defaults" build' _ "$IDF_EXPORT" "$variant" 2>&1 | tail -n 6 || fail "the firmware did not build."
+  local build="firmware/build-release/$variant"
   [ -f "$build/flasher_args.json" ] || fail "the firmware build left no flasher_args.json."
 
-  step "ESP: checking the image"
+  step "ESP ($variant): checking the image"
   # The three files and where they go. If the layout ever changes, this stops
   # so the README and notes are changed on purpose, not by accident.
   local layout
@@ -351,7 +386,19 @@ PY
   [ "$size" -le "$limit" ] || fail "the firmware is $size bytes; the app partition holds $limit."
   echo "Firmware $size bytes of $limit ($((size * 100 / limit)) %)."
   [ "$(strings -a "$app" | grep -cx "$VERSION")" -gt 0 ] || fail "the firmware does not carry the version $VERSION (it was not rebuilt?)."
+  # The image must be for this hardware and no other.
+  local other count
+  for other in "${ESP_VARIANTS[@]}"; do
+    # (Counting, not grep -q: with pipefail an early-exiting grep makes the pipe fail.)
+    count=$(strings -a "$app" | grep -cxF "$(esp_board_in "$other")" || true)
+    if [ "$other" = "$variant" ]; then
+      [ "$count" -gt 0 ] || fail "the $variant image does not name its hardware '$(esp_board_in "$other")'."
+    else
+      [ "$count" -eq 0 ] || fail "the $variant image names the hardware of the $other image."
+    fi
+  done
   for file in "$boot" "$table" "$app"; do check_no_user "$file" "$(basename "$file")"; done
+  grep -q -- "$ROOT_REL" "$app" && fail "the firmware contains the project folder path."
   # The browser page is inside the image, compressed, so look at the page itself.
   local page_wasm
   page_wasm=$(mktemp)
@@ -360,9 +407,9 @@ PY
   grep -q -- "$HOME" "$page_wasm" && fail "the browser page contains the home folder path."
   grep -q -- "$ROOT_REL" "$page_wasm" && fail "the browser page contains the project folder path."
   rm -f "$page_wasm"
-  echo "Version $VERSION is in the image; no user name in any file."
+  echo "Version $VERSION and the right hardware name are in the image; no user name in any file."
 
-  step "ESP: assembling $folder"
+  step "ESP ($variant): assembling $folder"
   fresh_folder "$dist" "$folder"
   cp "$boot" "$folder/bootloader.bin"
   cp "$table" "$folder/partition-table.bin"
@@ -370,14 +417,16 @@ PY
   printf '%s\n0x1000 bootloader.bin\n0x8000 partition-table.bin\n0x20000 s01-monitor-esp32.bin\n' "$settings" > "$folder/flash_args"
   (cd "$folder" && shasum -a 256 bootloader.bin partition-table.bin s01-monitor-esp32.bin > SHA256SUMS)
   cp CHANGELOG.md "$folder/CHANGELOG.md"
-  write_readme "$folder" scripts/esp_readme.txt "ESP32 firmware"
+  write_readme "$folder" scripts/esp_readme.txt "$(esp_label "$variant")"
+  # The README text is shared; the hardware paragraph is the one that differs.
+  sed -e "/@BOARD@/{r scripts/esp_board_$variant.txt" -e 'd' -e '}' "$folder/README.txt" > "$folder/README.tmp" && mv "$folder/README.tmp" "$folder/README.txt"
+  grep -q '@BOARD@' "$folder/README.txt" && fail "the README still has its @BOARD@ placeholder."
   check_texts "$folder"
   check_listing "$folder" "CHANGELOG.md|README.txt|SHA256SUMS|bootloader.bin|flash_args|partition-table.bin|s01-monitor-esp32.bin"
   (cd "$folder" && shasum -a 256 -c SHA256SUMS >/dev/null) || fail "the checksums do not match the copied files."
 
-  step "ESP: zipping"
-  local zip="$folder.zip" n entries expected
-  n=$(name_for esp)
+  step "ESP ($variant): zipping"
+  local zip="$folder.zip" entries expected f
   (cd "$dist" && zip -X -q -r "$n.zip" "$n")
   entries=$(unzip -Z1 "$zip" | grep -v '/$' | C_ORDER | paste -sd'|' -)
   expected=$(for f in CHANGELOG.md README.txt SHA256SUMS bootloader.bin flash_args partition-table.bin s01-monitor-esp32.bin; do echo "$n/$f"; done | C_ORDER | paste -sd'|' -)
@@ -385,9 +434,10 @@ PY
   for f in bootloader.bin partition-table.bin s01-monitor-esp32.bin; do
     unzip -p "$zip" "$n/$f" | cmp -s - "$folder/$f" || fail "$f in the zip is not the one that was built."
   done
-  report_zip "$folder" "$zip" "It was built, not flashed. How to flash it later is in its README.txt." \
+  report_zip "$folder" "$zip" "Built, not flashed. For: $(esp_board_in "$variant")." \
     "the three .bin files, flash_args, SHA256SUMS, README.txt, CHANGELOG.md"
 }
+
 
 report_zip() { # folder zip note [what the zip holds]
   step "Done"

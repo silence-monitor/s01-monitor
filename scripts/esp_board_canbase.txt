@@ -1,0 +1,9 @@
+The hardware this image is for
+------------------------------
+M5 ATOM Lite with the Atomic CAN Base. The CAN pins are GPIO 22 (TX) and
+GPIO 19 (RX).
+
+Flash this image only on that hardware. On an ATOM Lite with a Unit CAN on the
+Grove port it would listen on the wrong pins and see nothing; that hardware has
+its own package (the one with "grovecan" in its name). Every image prints the
+hardware it was built for in the boot log ("Hardware: ...").
