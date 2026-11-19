@@ -10,6 +10,20 @@ new version and an entry here, in the same commit. A new feature raises the
 middle number (0.3.0). A fix raises the last one (0.2.2). `cargo test` fails
 if the newest entry here does not match the version in `Cargo.toml`.
 
+## 0.13.2 (19 Nov 2026)
+
+**Fixed**
+- After a format the SD card screen kept showing the old state until the page
+  was refreshed. The unit now answers the Format request at once and the page
+  follows it in the card's status ("Formatting...", then "Formatted."), instead
+  of one request waiting up to a minute, which a browser or the unit's
+  connection handling can drop. The page also gives up on a request that has
+  had no answer for 6 seconds and asks again, so one lost answer cannot stop it
+  from updating.
+- **Look again** left "Looking for the card again..." on the screen for good.
+  It now shows for a few seconds, and the card's state and the unit's own
+  message say what it found.
+
 ## 0.13.1 (19 Nov 2026)
 
 **Fixed**

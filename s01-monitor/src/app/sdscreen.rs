@@ -17,6 +17,10 @@ use crate::sdcard::{self, Answer, CardState, Kind, Listing, Request, Status, Upl
 
 const STATUS_EVERY: Duration = Duration::from_secs(2);
 const TIME_EVERY: Duration = Duration::from_secs(300);
+/// A request with no answer for this long is given up on, so one lost answer
+/// cannot stop the polling for good.
+const REQUEST_LOST: Duration = Duration::from_secs(6);
+const LOOKING_FOR: Duration = Duration::from_secs(5);
 
 /// A destructive action waiting for a yes.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -40,7 +44,9 @@ pub struct SdScreen {
     pub path: String,
     pub listing: Option<Listing>,
     list_waiting: bool,
+    list_at: Option<Instant>,
     list_wanted: bool,
+    looking_until: Option<Instant>,
     pub list_error: Option<String>,
     time_at: Option<Instant>,
     /// What the last action said, and whether it was a problem.
@@ -66,7 +72,9 @@ impl Default for SdScreen {
             path: "/".into(),
             listing: None,
             list_waiting: false,
+            list_at: None,
             list_wanted: true,
+            looking_until: None,
             list_error: None,
             time_at: None,
             note: None,
@@ -98,6 +106,13 @@ impl SdScreen {
                 requests.push(sdcard::time(seconds));
             }
         }
+        if self.status_waiting && self.status_at.map_or(false, |at| now.duration_since(at) >= REQUEST_LOST) {
+            self.status_waiting = false;
+        }
+        if self.list_waiting && self.list_at.map_or(false, |at| now.duration_since(at) >= REQUEST_LOST) {
+            self.list_waiting = false;
+            self.list_wanted = true;
+        }
         if visible {
             if !self.status_waiting && self.status_at.map_or(true, |at| now.duration_since(at) >= STATUS_EVERY) {
                 self.status_at = Some(now);
@@ -107,6 +122,7 @@ impl SdScreen {
             if self.list_wanted && !self.list_waiting && self.status.state == CardState::Ready {
                 self.list_wanted = false;
                 self.list_waiting = true;
+                self.list_at = Some(now);
                 requests.push(sdcard::list(&self.path));
             }
         }
@@ -141,6 +157,13 @@ impl SdScreen {
                     self.listing = None;
                     self.list_error = None;
                 }
+                // The "formatting has started" note has done its job once the unit is done.
+                if status.busy.is_none()
+                    && status.state != CardState::Formatting
+                    && self.note.as_ref().is_some_and(|(text, _)| text.starts_with("Formatting has started"))
+                {
+                    self.note = None;
+                }
                 self.last_state = status.state;
                 self.last_busy = status.busy.clone();
                 self.status = status;
@@ -159,7 +182,10 @@ impl SdScreen {
                 }
             }
             Kind::Mkdir | Kind::Delete | Kind::Format | Kind::Eject | Kind::Mount | Kind::Record | Kind::Auto => {
-                if answer.ok() {
+                if answer.ok() && answer.kind == Kind::Mount {
+                    // The result shows in the card's state; say so only for a moment.
+                    self.looking_until = Some(Instant::now() + LOOKING_FOR);
+                } else if answer.ok() {
                     // Starting and stopping a recording show in the card's status; no note needed.
                     self.note = Some(done_text(&answer)).filter(|text| !text.is_empty()).map(|text| (text, false));
                     self.list_wanted = true;
@@ -210,6 +236,12 @@ impl SdScreen {
         (sending || visible) && self.upload_at.map_or(true, |at| now.duration_since(at) >= Duration::from_millis(300))
     }
 
+    /// "Look again" was pressed a moment ago and the unit has not answered with
+    /// a new state yet.
+    pub fn looking(&self, now: Instant) -> bool {
+        self.looking_until.map_or(false, |until| now < until)
+    }
+
     /// True while the unit is doing something that should not be interrupted.
     pub fn busy(&self) -> bool {
         self.status.busy.is_some() || matches!(self.upload, Upload::Sending { .. })
@@ -220,9 +252,8 @@ fn done_text(answer: &Answer) -> String {
     match answer.kind {
         Kind::Mkdir => format!("Created the folder {}.", sdcard::leaf(&answer.tag)),
         Kind::Delete => format!("Deleted {}.", sdcard::leaf(&answer.tag)),
-        Kind::Format => "The card is formatted.".to_string(),
+        Kind::Format => "Formatting has started. It can take up to a minute; the card's state is shown below.".to_string(),
         Kind::Eject => "Ejected. It is safe to take the card out.".to_string(),
-        Kind::Mount => "Looking for the card again...".to_string(),
         Kind::Record | Kind::Auto => String::new(),
         _ => "Done.".to_string(),
     }
@@ -302,8 +333,11 @@ impl MonitorApp {
                 CardState::Unmounting => ("Letting go of the card...", WARN),
             };
             ui.label(RichText::new(headline).size(16.0).color(colour));
-            if !status.message.is_empty() && status.state != CardState::Ready {
+            if !status.message.is_empty() {
                 ui.label(RichText::new(&status.message).color(MUTED));
+            }
+            if self.sd.looking(Instant::now()) && status.state != CardState::Ready {
+                ui.label(RichText::new("Looking for the card again...").color(MUTED));
             }
             if status.state == CardState::NoCard {
                 ui.label(
@@ -600,7 +634,7 @@ impl MonitorApp {
                     if status.state == CardState::Ready {
                         format!("Everything on the card will be erased: {} in use of {}.", sdcard::size_text(status.used_bytes()), sdcard::size_text(status.total_bytes))
                     } else {
-                        "The card will get a new file system.".to_string()
+                        "The card has no file system the unit can read. Anything on it that another system understands will be erased.".to_string()
                     },
                     "This cannot be undone. It can take a minute, and the card cannot be used until it is done.".to_string(),
                 ],
@@ -785,6 +819,47 @@ mod tests {
         assert!(s.unreachable);
         s.apply(answer(Kind::Status, "", 200, "state ready\n"));
         assert!(!s.unreachable);
+    }
+
+    #[test]
+    fn a_lost_answer_does_not_stop_the_polling_for_good() {
+        let mut s = SdScreen::default();
+        let t0 = Instant::now();
+        s.tick(t0, true, None);
+        s.apply(answer(Kind::Info, "", 200, "sd 1\n"));
+        let kinds = |r: Vec<Request>| r.into_iter().map(|r| r.kind).collect::<Vec<_>>();
+        assert_eq!(kinds(s.tick(t0, true, None)), [Kind::Status]);
+        assert!(kinds(s.tick(t0 + Duration::from_secs(4), true, None)).is_empty(), "still waiting");
+        assert_eq!(kinds(s.tick(t0 + Duration::from_secs(7), true, None)), [Kind::Status], "given up on, asked again");
+        // The same for a folder that never came back.
+        s.apply(answer(Kind::Status, "", 200, "state ready\n"));
+        let list = s.tick(t0 + Duration::from_secs(8), true, None);
+        assert!(list.iter().any(|r| r.kind == Kind::List));
+        s.apply(answer(Kind::Status, "", 200, "state ready\n"));
+        assert!(s.tick(t0 + Duration::from_secs(10), true, None).iter().all(|r| r.kind != Kind::List));
+        assert!(s.tick(t0 + Duration::from_secs(15), true, None).iter().any(|r| r.kind == Kind::List));
+    }
+
+    #[test]
+    fn look_again_says_so_for_a_moment_and_leaves_no_note_behind() {
+        let mut s = SdScreen::default();
+        s.apply(answer(Kind::Mount, "", 204, ""));
+        assert!(s.note.is_none());
+        assert!(s.looking(Instant::now()));
+        assert!(!s.looking(Instant::now() + Duration::from_secs(6)));
+    }
+
+    #[test]
+    fn a_format_says_it_has_started_and_the_result_comes_from_the_status() {
+        let mut s = ready_screen();
+        s.apply(answer(Kind::Format, "", 204, ""));
+        assert!(s.note.as_ref().is_some_and(|(text, bad)| text.starts_with("Formatting has started") && !bad));
+        s.apply(answer(Kind::Status, "", 200, "state formatting\nbusy format\n"));
+        assert!(s.busy());
+        s.apply(answer(Kind::Status, "", 200, "state ready\nmessage Formatted.\nbusy none\n"));
+        assert_eq!(s.status.message, "Formatted.");
+        assert!(s.note.is_none(), "the note about it having started goes once it is done");
+        assert!(s.list_wanted, "the card is new, so its folder is read again");
     }
 
     #[test]

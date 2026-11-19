@@ -341,9 +341,12 @@ class FakeCard:
         else:
             self.state, self.busy = "formatting", "format"
             self.message = "Formatting the card..."
-            await asyncio.sleep(3)
-            for name in os.listdir(self.root):
-                p = os.path.join(self.root, name)
-                shutil.rmtree(p) if os.path.isdir(p) else os.remove(p)
-            self.state, self.busy, self.message = "ready", "none", "Formatted."
-            reply(writer, "204 No Content")
+            asyncio.get_running_loop().create_task(self.finish_format())
+            reply(writer, "204 No Content")  # answered at once, as the unit does; the page follows the status
+
+    async def finish_format(self):
+        await asyncio.sleep(3)
+        for name in os.listdir(self.root):
+            p = os.path.join(self.root, name)
+            shutil.rmtree(p) if os.path.isdir(p) else os.remove(p)
+        self.state, self.busy, self.message = "ready", "none", "Formatted."

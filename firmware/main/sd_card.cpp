@@ -719,15 +719,14 @@ static void do_delete(httpd_req_t *req, const char *path)
     }
 }
 
-static void do_format(httpd_req_t *req)
+// Formatting takes a while (tens of seconds on a big card), so the request that
+// asked for it is answered at once (see format_post) and the page watches the
+// status. The result is left in the status message.
+static void do_format()
 {
-    if (g_want_record.load() || g_rec_active.load()) {
-        reply(req, "409 Conflict", "stop the recording first");
-        return;
-    }
     State before = state();
     if (before != State::Ready && before != State::NoFilesystem) {
-        reply_not_ready(req);
+        set_message("The card is not ready to be formatted");
         return;
     }
     ESP_LOGW(TAG, "formatting the card");
@@ -753,10 +752,10 @@ static void do_format(httpd_req_t *req)
     set_state(after);
     if (err == ESP_OK && after == State::Ready) {
         set_message("Formatted.");
-        reply_ok(req);
+        ESP_LOGI(TAG, "formatted");
     } else {
         set_message("Formatting failed (%s)", esp_err_to_name(err == ESP_OK ? ESP_FAIL : err));
-        reply(req, "500 Internal Server Error", "formatting failed");
+        ESP_LOGW(TAG, "formatting failed");
     }
 }
 
@@ -783,11 +782,13 @@ static void worker_task(void *)
         case Job::Download: do_download(job.req, job.path); break;
         case Job::Upload: do_upload(job.req, job.path); break;
         case Job::Delete: do_delete(job.req, job.path); break;
-        case Job::Format: do_format(job.req); break;
+        case Job::Format: do_format(); break;
         case Job::Eject: do_eject(job.req); break;
         case Job::None: break;
         }
-        httpd_req_async_handler_complete(job.req);
+        if (job.req != nullptr) {
+            httpd_req_async_handler_complete(job.req);
+        }
         g_busy.store(static_cast<int>(Job::None));
     }
 }
@@ -1253,7 +1254,24 @@ static esp_err_t format_post(httpd_req_t *req)
         reply_not_ready(req);
         return ESP_OK;
     }
-    return start_job(req, Job::Format, "/");
+    // Answered at once; the job carries on without a request and the page
+    // follows it in the status.
+    int expected = static_cast<int>(Job::None);
+    if (!g_busy.compare_exchange_strong(expected, static_cast<int>(Job::Format))) {
+        reply(req, "409 Conflict", "busy with another job");
+        return ESP_OK;
+    }
+    JobRequest job = {};
+    job.kind = Job::Format;
+    job.req = nullptr;
+    snprintf(job.path, sizeof job.path, "/");
+    if (xQueueSend(g_jobs, &job, 0) != pdTRUE) {
+        g_busy.store(static_cast<int>(Job::None));
+        reply(req, "500 Internal Server Error", "the job queue is full");
+        return ESP_OK;
+    }
+    reply_ok(req);
+    return ESP_OK;
 }
 
 static esp_err_t eject_post(httpd_req_t *req)

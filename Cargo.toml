@@ -7,7 +7,7 @@ members = ["s01-monitor"]
 # changed. Raise it with every change that alters behaviour, and add the matching
 # entry to CHANGELOG.md in the same commit (cargo test checks they agree).
 [workspace.package]
-version = "0.13.1"
+version = "0.13.2"
 
 # Small download for the browser build: cargo build --profile web --target wasm32-unknown-unknown
 [profile.web]
