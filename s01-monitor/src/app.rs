@@ -2288,6 +2288,7 @@ impl MonitorApp {
         // device, as before. A recording the unit is already making (started in
         // another browser, or by itself at power-up) is stopped from here too.
         let to_card = self.record_to_card();
+        let card_destination = self.record_destination_is_card();
         let unit_recording = self.unit_recording();
         ui.horizontal_wrapped(|ui| {
             let can = matches!(self.link, Link::Can | Link::Replay);
@@ -2299,8 +2300,9 @@ impl MonitorApp {
                 if ui.button("Stop recording").clicked() {
                     self.stop_card_recording();
                 }
-            } else if to_card {
-                if ui.button("Record to the SD card").clicked() {
+            } else if card_destination {
+                // The label says where it will go even before the page is connected.
+                if action_button(ui, "Record to the SD card", to_card).clicked() {
                     self.start_card_recording();
                 }
             } else if action_button(ui, "Record", can).clicked() {
@@ -2329,6 +2331,8 @@ impl MonitorApp {
                 ui.label(RichText::new(&self.record_note).color(MUTED));
             } else if self.link == Link::Sim {
                 ui.label(RichText::new("The simulation makes no CAN frames, so there is nothing to record.").color(MUTED));
+            } else if self.link == Link::Idle && card_destination {
+                ui.label(RichText::new("Connect to the unit, then record every frame to the SD card.").color(MUTED));
             } else if self.link == Link::Idle {
                 ui.label(RichText::new("Connect to the scooter, then record every frame to a log file.").color(MUTED));
             }
@@ -4155,6 +4159,32 @@ mod tests {
         app.sd.unreachable = false;
         app.sd.available = false;
         assert!(!app.record_to_card_with(unit()), "the Atomic CAN Base unit has no card");
+    }
+
+    #[test]
+    fn the_record_label_names_the_card_before_the_page_is_connected() {
+        use crate::sdcard::parse_status;
+        let ctx = egui::Context::default();
+        let cc = eframe::CreationContext::_new_kittest(ctx.clone());
+        let mut app = MonitorApp::new(&cc);
+        let unit = || Some("ws://192.168.4.1/ws".to_string());
+        app.sd.available = true;
+        app.sd.status = parse_status("state ready\n");
+        app.selected_port = Some("ws://192.168.4.1/ws".into());
+        app.link = Link::Idle;
+        assert!(app.destination_is_card_of(unit()), "not connected yet, but it would go to the card");
+        assert!(!app.record_to_card_with(unit()), "and it cannot start until connected");
+        app.link = Link::Can;
+        assert!(app.destination_is_card_of(unit()) && app.record_to_card_with(unit()));
+        for link in [Link::Sim, Link::Replay] {
+            app.link = link;
+            assert!(!app.destination_is_card_of(unit()), "a simulation or a replay records on the device");
+        }
+        app.link = Link::Idle;
+        assert!(!app.destination_is_card_of(None), "no unit served this page");
+        assert!(!app.destination_is_card_of(Some("ws://10.0.0.9/ws".into())), "another address");
+        app.sd.status = parse_status("state nocard\n");
+        assert!(!app.destination_is_card_of(unit()), "no card ready");
     }
 
     #[test]

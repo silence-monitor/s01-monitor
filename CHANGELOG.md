@@ -10,6 +10,19 @@ new version and an entry here, in the same commit. A new feature raises the
 middle number (0.3.0). A fix raises the last one (0.2.2). `cargo test` fails
 if the newest entry here does not match the version in `Cargo.toml`.
 
+## 0.14.1 (20 Nov 2026)
+
+**Changed**
+- The Record button on the Frames screen now says **Record to the SD card** as
+  soon as that is where it would go (the page was served by a unit, points at it,
+  and the card is ready), even before the page is connected. It stays disabled
+  until connected, with the hint "Connect to the unit, then record every frame to
+  the SD card.". Simulate and a replay still show **Record**.
+- The SD card screen no longer has its own Start recording and Stop recording
+  buttons: the Record button on the Frames screen is the one control. The
+  screen keeps the recording's status, the setting to start by itself, and a
+  **Go to the Record button** shortcut.
+
 ## 0.14.0 (20 Nov 2026)
 
 **Changed**

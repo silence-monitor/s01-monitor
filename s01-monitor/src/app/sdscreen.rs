@@ -314,8 +314,22 @@ impl MonitorApp {
         self.sd.available && (self.sd.status.recording || self.sd.status.record_wanted)
     }
 
-    /// Where the Record button would send a new recording: the card, when this
-    /// page is on the unit's own bus and the card is ready.
+    /// Where the Record button would send a recording, so its label can say so
+    /// even before the page is connected: the card, when the page was served by
+    /// a unit, is pointed at that unit, is not playing a simulation or a replay,
+    /// and the unit's card is ready.
+    pub(super) fn record_destination_is_card(&self) -> bool {
+        self.destination_is_card_of(crate::platform::device_url())
+    }
+
+    pub(super) fn destination_is_card_of(&self, own: Option<String>) -> bool {
+        matches!(self.link, super::Link::Idle | super::Link::Can)
+            && own.is_some_and(|own| self.selected_port.as_deref() == Some(own.as_str()))
+            && self.card_ready()
+    }
+
+    /// The Record button can start a card recording now: the destination is the
+    /// card and the page is connected to the unit's live bus.
     pub(super) fn record_to_card(&self) -> bool {
         self.on_unit_bus() && self.card_ready()
     }
@@ -521,13 +535,10 @@ impl MonitorApp {
             ui.label(RichText::new(line).color(if status.recording { GOOD } else { INK }));
             ui.add_space(6.0);
             ui.horizontal_wrapped(|ui| {
-                let on = status.recording || status.record_wanted;
-                if on {
-                    if ui.button("Stop recording").clicked() {
-                        sdcard::send(sdcard::record(false));
-                    }
-                } else if action_button(ui, "Start recording", ready && status.busy.as_deref() != Some("format")).clicked() {
-                    sdcard::send(sdcard::record(true));
+                // Starting and stopping is the Record button on the Frames screen, the one
+                // button for recording wherever it goes.
+                if ui.button("Go to the Record button").clicked() {
+                    self.screen = super::Screen::Frames;
                 }
                 let mut automatic = status.auto;
                 if ui
