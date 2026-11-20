@@ -57,6 +57,8 @@ pub struct SdScreen {
     upload_at: Option<Instant>,
     last_busy: Option<String>,
     last_state: CardState,
+    /// The file of a recording on the card that this page stopped, so it can be downloaded.
+    pub saved: Option<String>,
 }
 
 impl Default for SdScreen {
@@ -84,6 +86,7 @@ impl Default for SdScreen {
             upload_at: None,
             last_busy: None,
             last_state: CardState::Unknown,
+            saved: None,
         }
     }
 }
@@ -138,6 +141,11 @@ impl SdScreen {
                 self.hardware = info.hardware;
             }
             Kind::Time => {}
+            Kind::Mark => {
+                if !answer.ok() {
+                    self.note = Some((format!("The marker did not go into the card recording: {}", answer.problem()), true));
+                }
+            }
             Kind::Status => {
                 self.status_waiting = false;
                 if !answer.ok() {
@@ -268,7 +276,8 @@ impl MonitorApp {
             self.sd.apply(answer);
         }
         let now = Instant::now();
-        let visible = self.screen == super::Screen::SdCard;
+        // The Frames screen has the Record button, which needs to know the card.
+        let visible = matches!(self.screen, super::Screen::SdCard | super::Screen::Frames);
         if self.sd.wants_upload_poll(now, visible) {
             let state = sdcard::upload_state();
             if matches!(state, Upload::Finished { .. } | Upload::Failed { .. }) {
@@ -278,6 +287,79 @@ impl MonitorApp {
         }
         for request in self.sd.tick(now, visible, sdcard::local_seconds()) {
             sdcard::send(request);
+        }
+    }
+
+    /// The page is connected to the live bus of the unit that served it (not a
+    /// simulation, a replay, or some other address).
+    pub(super) fn on_unit_bus(&self) -> bool {
+        self.on_bus_of(crate::platform::device_url())
+    }
+
+    /// `own` is the address of the unit that served this page, if one did.
+    pub(super) fn on_bus_of(&self, own: Option<String>) -> bool {
+        self.link == super::Link::Can && own.is_some_and(|own| self.selected_port.as_deref() == Some(own.as_str()))
+    }
+
+    /// The unit has a card that is ready to be written to.
+    pub(super) fn card_ready(&self) -> bool {
+        self.sd.available
+            && !self.sd.unreachable
+            && self.sd.status.state == CardState::Ready
+            && self.sd.status.busy.as_deref() != Some("format")
+    }
+
+    /// The unit is recording to its card (started here, in another browser, or by itself at power-up).
+    pub(super) fn unit_recording(&self) -> bool {
+        self.sd.available && (self.sd.status.recording || self.sd.status.record_wanted)
+    }
+
+    /// Where the Record button would send a new recording: the card, when this
+    /// page is on the unit's own bus and the card is ready.
+    pub(super) fn record_to_card(&self) -> bool {
+        self.on_unit_bus() && self.card_ready()
+    }
+
+    /// The same, for a given own address (the tests have none to ask).
+    #[cfg(test)]
+    pub(super) fn record_to_card_with(&self, own: Option<String>) -> bool {
+        self.on_bus_of(own) && self.card_ready()
+    }
+
+    pub(super) fn start_card_recording(&mut self) {
+        self.sd.saved = None;
+        self.record_note.clear();
+        sdcard::send(sdcard::record(true));
+    }
+
+    pub(super) fn stop_card_recording(&mut self) {
+        let file = self.sd.status.record_file.clone();
+        self.sd.saved = Some(file).filter(|file| !file.is_empty());
+        sdcard::send(sdcard::record(false));
+    }
+
+    /// The line about the unit's recording on the Frames screen: what it is writing, or
+    /// what was just saved, with a way to get the file.
+    pub(super) fn card_record_line(&mut self, ui: &mut egui::Ui) {
+        let status = self.sd.status.clone();
+        if self.unit_recording() {
+            let text = if status.recording {
+                format!(
+                    "Recording to the SD card · {} frames · {} · {}{}",
+                    status.record_frames,
+                    sdcard::size_text(status.record_bytes),
+                    sdcard::leaf(&status.record_file),
+                    if status.record_lost > 0 { format!(" · {} lost", status.record_lost) } else { String::new() }
+                )
+            } else {
+                "Recording to the SD card · waiting for the first frame".to_string()
+            };
+            ui.label(RichText::new(text).color(GOOD));
+        } else if let Some(file) = self.sd.saved.clone() {
+            ui.label(RichText::new(format!("Saved on the SD card as {}", sdcard::leaf(&file))).color(MUTED));
+            if ui.button("Download").clicked() {
+                sdcard::download(&file);
+            }
         }
     }
 

@@ -35,6 +35,7 @@ scooter's CAN bus to it. Decoding happens in the browser.
   | `PUT /sd/file?path=` | upload, written as `.part` and renamed when whole |
   | `POST /sd/delete?path=`, `/sd/mkdir?path=` | delete a file or a folder with its contents, make a folder |
   | `POST /sd/format`, `/sd/eject`, `/sd/mount` | format (refused while recording), let go of the card, look again |
+  | `POST /sd/mark?text=` | puts a `# MARK` line into the recording being written (409 if none) |
   | `POST /sd/record?on=1/0`, `/sd/auto?on=1/0` | start or stop the recording, start it by itself when there is a card (kept in `nvs`) |
 
   How it holds together: a manager task owns mounting and notices a lost card

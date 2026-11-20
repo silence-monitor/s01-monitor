@@ -111,6 +111,19 @@ int main()
     EXPECT(sdp::can_line(line, sizeof line, 0, 1, 9, data) == 0);       // dlc too big
     EXPECT(sdp::can_line(line, 10, 0, 1, 1, data) == 0);                // too small
 
+    // A marker, as the app writes it.
+    n = sdp::mark_line(line, sizeof line, (17ull * 3600 + 46 * 60 + 2) * 1000 + 310, "pressed reverse");
+    EXPECT(n > 0 && std::strcmp(line, "# MARK 17:46:02.310 pressed reverse\n") == 0);
+    n = sdp::mark_line(line, sizeof line, 0, "  padded  ");
+    EXPECT(n > 0 && std::strcmp(line, "# MARK 00:00:00.000 padded\n") == 0);
+    n = sdp::mark_line(line, sizeof line, 0, "a\tb\nc");
+    EXPECT(n > 0 && std::strcmp(line, "# MARK 00:00:00.000 a b c\n") == 0);
+    n = sdp::mark_line(line, sizeof line, 0, "");
+    EXPECT(n > 0 && std::strcmp(line, "# MARK 00:00:00.000 \n") == 0);
+    n = sdp::mark_line(line, 48, 0, "this text is far too long to fit in the little buffer it is given");
+    EXPECT(n > 0 && n < 48 && line[n - 1] == '\n' && line[n] == 0);   // cut, never overrun
+    EXPECT(sdp::mark_line(line, 20, 0, "x") == 0);
+
     // Calendar and names.
     sdp::Calendar c = sdp::calendar_from(0);
     EXPECT(c.year == 1970 && c.month == 1 && c.day == 1 && c.hour == 0);

@@ -21,6 +21,7 @@ use crate::paramdiff::{self, Baseline, Change, ParamRow};
 use crate::params::{self, Section};
 use crate::platform;
 use crate::readings::{self, mv_text, signed_mv, CellSpread, Row};
+use crate::sdcard;
 use crate::slcan;
 use crate::snapshot::{self, lock, Sample, Snapshot};
 use crate::source::{self, Kind};
@@ -1894,7 +1895,8 @@ impl MonitorApp {
 
 impl MonitorApp {
     fn drop_mark(&mut self) {
-        if self.link == Link::Idle {
+        let card = self.unit_recording();
+        if self.link == Link::Idle && !card {
             self.mark_note = "Connect, simulate or replay first, then mark.".into();
             return;
         }
@@ -1906,9 +1908,15 @@ impl MonitorApp {
             } else {
                 typed
             };
-            snap.mark_now(&text);
+            if self.link != Link::Idle {
+                snap.mark_now(&text);
+            }
             text
         };
+        // A recording the unit is making to its card gets the marker too.
+        if card {
+            sdcard::send(sdcard::mark(&text));
+        }
         self.mark_note = format!("Marked: {text}");
         self.mark_text.clear();
     }
@@ -2275,14 +2283,31 @@ impl MonitorApp {
     }
 
     fn record_row(&mut self, ui: &mut egui::Ui, snap: &Snapshot) {
+        // One Record button. On the page of a unit with a card that is ready, and
+        // connected to that unit's bus, it records on the card; otherwise on this
+        // device, as before. A recording the unit is already making (started in
+        // another browser, or by itself at power-up) is stopped from here too.
+        let to_card = self.record_to_card();
+        let unit_recording = self.unit_recording();
         ui.horizontal_wrapped(|ui| {
             let can = matches!(self.link, Link::Can | Link::Replay);
             if snap.recorder.is_some() {
                 if ui.button("Stop recording").clicked() {
                     self.stop_recording();
                 }
+            } else if unit_recording {
+                if ui.button("Stop recording").clicked() {
+                    self.stop_card_recording();
+                }
+            } else if to_card {
+                if ui.button("Record to the SD card").clicked() {
+                    self.start_card_recording();
+                }
             } else if action_button(ui, "Record", can).clicked() {
                 self.start_recording();
+            }
+            if snap.recorder.is_some() && unit_recording {
+                self.card_record_line(ui);
             }
             if let Some((path, frames, marks, error)) = snap.recorder_info() {
                 if let Some(error) = error {
@@ -2298,6 +2323,8 @@ impl MonitorApp {
                         .color(GOOD),
                     );
                 }
+            } else if unit_recording || self.sd.saved.is_some() {
+                self.card_record_line(ui);
             } else if !self.record_note.is_empty() {
                 ui.label(RichText::new(&self.record_note).color(MUTED));
             } else if self.link == Link::Sim {
@@ -4090,6 +4117,70 @@ mod tests {
                     ] {
                         app.sd.confirm = Some(confirm);
                         draw_once(&mut app, &ctx, width, height);
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn record_goes_to_the_card_only_when_this_page_is_on_the_units_own_bus_and_the_card_is_ready() {
+        use crate::sdcard::parse_status;
+        let ctx = egui::Context::default();
+        let cc = eframe::CreationContext::_new_kittest(ctx.clone());
+        let mut app = MonitorApp::new(&cc);
+        let unit = || Some("ws://192.168.4.1/ws".to_string());
+        app.sd.available = true;
+        app.sd.status = parse_status("state ready\n");
+        app.link = Link::Can;
+        app.selected_port = Some("ws://192.168.4.1/ws".into());
+        assert!(app.record_to_card_with(unit()), "the unit's own bus with a ready card");
+        assert!(!app.record_to_card_with(None), "a computer with a CANable has no unit");
+        assert!(!app.record_to_card_with(Some("ws://10.0.0.9/ws".into())), "another address is not this unit");
+        app.selected_port = Some("ws://10.0.0.9/ws".into());
+        assert!(!app.record_to_card_with(unit()), "connected to some other address");
+        app.selected_port = Some("ws://192.168.4.1/ws".into());
+        for link in [Link::Idle, Link::Sim, Link::Replay] {
+            app.link = link;
+            assert!(!app.record_to_card_with(unit()), "not the live bus");
+        }
+        app.link = Link::Can;
+        for status in ["state nocard\n", "state nofs\n", "state toobig\n", "state ejected\n", "state formatting\nbusy format\n", "state ready\nbusy format\n"] {
+            app.sd.status = parse_status(status);
+            assert!(!app.record_to_card_with(unit()), "{status:?}");
+        }
+        app.sd.status = parse_status("state ready\n");
+        app.sd.unreachable = true;
+        assert!(!app.record_to_card_with(unit()), "the unit is not answering");
+        app.sd.unreachable = false;
+        app.sd.available = false;
+        assert!(!app.record_to_card_with(unit()), "the Atomic CAN Base unit has no card");
+    }
+
+    #[test]
+    fn the_frames_screen_draws_its_record_row_in_every_card_state_at_every_size() {
+        use crate::sdcard::parse_status;
+        let states = [
+            "state ready\n",
+            "state nocard\n",
+            "state ready\nrecording 1\nrecord_wanted 1\nrecord_file /recordings/rec-20261119-214501.log\nrecord_frames 5000\nrecord_bytes 300000\nrecord_lost 2\n",
+            "state ready\nrecord_wanted 1\n",
+        ];
+        for (width, height) in [(360.0, 700.0), (390.0, 1500.0), (640.0, 800.0), (1180.0, 860.0)] {
+            for link in [Link::Idle, Link::Can, Link::Replay, Link::Sim] {
+                for state in states {
+                    for saved in [None, Some("/recordings/rec-0001.log".to_string())] {
+                        let ctx = egui::Context::default();
+                        let cc = eframe::CreationContext::_new_kittest(ctx.clone());
+                        let mut app = MonitorApp::new(&cc);
+                        app.screen = Screen::Frames;
+                        app.link = link;
+                        app.sd.available = true;
+                        app.sd.status = parse_status(state);
+                        app.sd.saved = saved;
+                        for _ in 0..2 {
+                            draw_once(&mut app, &ctx, width, height);
+                        }
                     }
                 }
             }

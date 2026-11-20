@@ -852,7 +852,13 @@ struct LogRecord {
     uint8_t data[8];
 };
 
+struct MarkRecord {
+    uint64_t uptime;
+    char text[64];
+};
+
 static MessageBufferHandle_t g_log = nullptr;
+static QueueHandle_t g_marks = nullptr;  // markers waiting to go into the recording
 static std::atomic<bool> g_log_open{false};  // the recorder wants frames
 
 void sd_log_frame(const twai_message_t &message)
@@ -986,6 +992,11 @@ static void recorder_run()
             }
             pending += sdp::can_line(chunk + pending, sizeof chunk - pending, wall_ms(record.uptime), record.id, record.dlc, record.data);
             g_rec_frames.fetch_add(1);
+        }
+        // Markers a person dropped in the page go into the file in the order they come.
+        MarkRecord mark;
+        while (file != nullptr && pending + 160 < sizeof chunk && xQueueReceive(g_marks, &mark, 0) == pdTRUE) {
+            pending += sdp::mark_line(chunk + pending, sizeof chunk - pending, wall_ms(mark.uptime), mark.text);
         }
         if (pending >= CHUNK || (pending > 0 && uptime_ms() - last_flush >= 1000)) {
             flush();
@@ -1327,6 +1338,30 @@ static esp_err_t record_post(httpd_req_t *req)
     return ESP_OK;
 }
 
+static esp_err_t mark_post(httpd_req_t *req)
+{
+    if (!allowed(req)) {
+        return ESP_OK;
+    }
+    char query[300];
+    MarkRecord mark = {};
+    if (httpd_req_get_url_query_str(req, query, sizeof query) != ESP_OK || !sdp::query_value(query, "text", mark.text, sizeof mark.text)) {
+        reply(req, "400 Bad Request", "no text, or too long (at most 63 characters)");
+        return ESP_OK;
+    }
+    if (!g_rec_active.load()) {
+        reply(req, "409 Conflict", "nothing is being recorded");
+        return ESP_OK;
+    }
+    mark.uptime = static_cast<uint64_t>(uptime_ms());
+    if (xQueueSend(g_marks, &mark, 0) != pdTRUE) {
+        reply(req, "503 Service Unavailable", "too many markers at once");
+        return ESP_OK;
+    }
+    reply_ok(req);
+    return ESP_OK;
+}
+
 static esp_err_t auto_post(httpd_req_t *req)
 {
     if (!allowed(req)) {
@@ -1376,6 +1411,7 @@ void sd_register(httpd_handle_t server)
     add_route(server, "/sd/mount", HTTP_POST, mount_post);
     add_route(server, "/sd/record", HTTP_POST, record_post);
     add_route(server, "/sd/auto", HTTP_POST, auto_post);
+    add_route(server, "/sd/mark", HTTP_POST, mark_post);
 }
 
 void sd_start()
@@ -1384,6 +1420,7 @@ void sd_start()
     g_rec_lock = xSemaphoreCreateMutex();
     g_jobs = xQueueCreate(1, sizeof(JobRequest));
     g_log = xMessageBufferCreate(LOG_BUFFER_BYTES);
+    g_marks = xQueueCreate(8, sizeof(MarkRecord));
     quiet_the_card_drivers();
     nvs_handle_t handle;
     uint8_t automatic = 0;

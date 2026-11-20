@@ -3,7 +3,7 @@
 It answers the same endpoints as the firmware (firmware/main/sd_card.cpp) with
 the same text, so the browser app's SD card screen can be tried with no
 hardware: /info, /time and /sd/status, /sd/list, /sd/file (GET and PUT),
-/sd/delete, /sd/mkdir, /sd/format, /sd/eject, /sd/mount, /sd/record, /sd/auto.
+/sd/delete, /sd/mkdir, /sd/format, /sd/eject, /sd/mount, /sd/record, /sd/auto, /sd/mark.
 
 The "card" is a folder on this computer. Recording writes the frames the bridge
 is playing into /recordings in the app's own capture format, as the unit does.
@@ -184,6 +184,18 @@ class FakeCard:
                 self.want_record, self.hold = False, True
                 self.stop_recording()
             reply(writer, "204 No Content")
+        elif route == "/sd/mark" and method == "POST":
+            text = query.get("text")
+            if text is None or len(text.encode()) > 63 or any(ord(c) < 0x20 for c in text):
+                reply(writer, "400 Bad Request", b"no text, or too long (at most 63 characters)")
+            elif self.rec_handle is None:
+                reply(writer, "409 Conflict", b"nothing is being recorded")
+            else:
+                ms = self.local_ms()
+                stamp = time.strftime("%H:%M:%S", time.gmtime(ms / 1000)) + f".{ms % 1000:03d}"
+                self.rec_handle.write(f"# MARK {stamp} {text.strip()}\n")
+                self.rec_handle.flush()
+                reply(writer, "204 No Content")
         elif route == "/sd/auto" and method == "POST":
             self.auto = query.get("on") == "1"
             reply(writer, "204 No Content")

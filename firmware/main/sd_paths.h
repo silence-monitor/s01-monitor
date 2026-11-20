@@ -240,6 +240,34 @@ inline size_t can_line(char *out, size_t capacity, uint64_t milliseconds, uint32
     return n;
 }
 
+// A marker as the app writes it: "# MARK 17:46:02.310 pressed reverse\n". The
+// text is trimmed and anything that is not printable becomes a space, so it can
+// never break the line. Returns the length, or 0 if it does not fit.
+inline size_t mark_line(char *out, size_t capacity, uint64_t milliseconds, const char *text)
+{
+    if (capacity < 40) {
+        return 0;
+    }
+    memcpy(out, "# MARK ", 7);
+    size_t n = 7;
+    n += clock_text(out + n, capacity - n, milliseconds);
+    out[n++] = ' ';
+    while (*text == ' ') {
+        ++text;
+    }
+    size_t length = strlen(text);
+    while (length > 0 && text[length - 1] == ' ') {
+        --length;
+    }
+    for (size_t i = 0; i < length && n + 2 < capacity; ++i) {
+        unsigned char c = static_cast<unsigned char>(text[i]);
+        out[n++] = (c < 0x20 || c == 0x7F) ? ' ' : static_cast<char>(c);
+    }
+    out[n++] = '\n';
+    out[n] = 0;
+    return n;
+}
+
 // Turns seconds since 1970 (taken as a calendar time with no zone) into a
 // year, month, day, hour, minute and second.
 struct Calendar {

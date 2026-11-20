@@ -31,6 +31,7 @@ pub enum Kind {
     Mount,
     Record,
     Auto,
+    Mark,
 }
 
 #[derive(Clone, Debug)]
@@ -145,6 +146,18 @@ pub fn record(on: bool) -> Request {
 
 pub fn auto(on: bool) -> Request {
     post(Kind::Auto, format!("/sd/auto?on={}", u8::from(on)), "")
+}
+
+/// A marker for the unit's recording. The unit takes at most 63 bytes.
+pub fn mark(text: &str) -> Request {
+    let mut cut = String::new();
+    for c in text.trim().chars() {
+        if cut.len() + c.len_utf8() > 60 {
+            break;
+        }
+        cut.push(c);
+    }
+    post(Kind::Mark, format!("/sd/mark?text={}", encode(&cut)), "")
 }
 
 pub fn file_url(path: &str) -> String {
@@ -636,6 +649,9 @@ mod tests {
         assert_eq!(file_url("/a b"), "/sd/file?path=%2Fa%20b");
         assert_eq!(record(true).url, "/sd/record?on=1");
         assert_eq!(auto(false).url, "/sd/auto?on=0");
+        assert_eq!(mark("pressed reverse").url, "/sd/mark?text=pressed%20reverse");
+        assert!(mark(&"x".repeat(100)).url.len() <= "/sd/mark?text=".len() + 60);
+        assert_eq!(mark("  padded ").url, "/sd/mark?text=padded");
         assert_eq!(time(1_795_124_701).url, "/time?local=1795124701");
         assert_eq!(list("/x").tag, "/x");
     }

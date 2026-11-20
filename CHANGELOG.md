@@ -10,6 +10,28 @@ new version and an entry here, in the same commit. A new feature raises the
 middle number (0.3.0). A fix raises the last one (0.2.2). `cargo test` fails
 if the newest entry here does not match the version in `Cargo.toml`.
 
+## 0.14.0 (20 Nov 2026)
+
+**Changed**
+- **One Record button.** On the page of a unit with an SD card, when the page is
+  connected to that unit's own bus and the card is ready, the Record button on
+  the Frames screen says **Record to the SD card** and the unit writes the
+  recording itself. Anywhere else (no card, a card that is not ready, the Atomic
+  CAN Base unit, the Windows and Mac programs, Simulate, a replay, or a page
+  connected to some other address) it says **Record** and records on this
+  device as before. The choice is made when the button is pressed and stays for
+  that recording. A recording the unit is already making (started in another
+  browser, or by itself at power-up) shows on the Frames screen and the same
+  button stops it. Stopping shows **Saved on the SD card as ...** with a
+  **Download** button. Disconnecting does not stop a card recording. There is no
+  option to keep a second copy on the device.
+- **Markers go into a card recording too.** The Mark button (and Ctrl+Shift+M)
+  sends the note to the unit, which writes it into the file as a `# MARK` line in
+  the app's own format, so a replay shows it. The unit has a new request for it,
+  `POST /sd/mark`; it refuses one when nothing is being recorded.
+- The page now asks the unit for the card's state also while the Frames screen
+  is open, so the Record button knows where it will send the recording.
+
 ## 0.13.2 (19 Nov 2026)
 
 **Fixed**
