@@ -1,7 +1,8 @@
 To open: unzip the folder, drag "Silence S01.app" to Applications (or leave it
 where it is) and double-click it.
-Works on Apple silicon (M1 and later) and Intel Macs, macOS 11 or later. Nothing
-to install.
+@MAC@
+
+Nothing to install.
 
 User-Guide.pdf in this folder explains every screen, step by step. Start
 there. What changed in this version, and in every version before it, is in

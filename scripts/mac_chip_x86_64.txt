@@ -1,0 +1,7 @@
+Which Mac this is for
+---------------------
+This package is for Intel Macs, macOS 11 or later. For a Mac with an Apple
+silicon chip (M1 and later) use the package with "arm64" in its name; this one
+also runs there through Apple's Rosetta 2, but the arm64 one is the better
+choice. To see which you have: Apple menu, About This Mac. A line starting
+"Processor: Intel ..." means Intel; "Chip: Apple M..." means Apple silicon.

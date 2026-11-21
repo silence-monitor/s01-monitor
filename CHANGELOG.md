@@ -10,6 +10,18 @@ new version and an entry here, in the same commit. A new feature raises the
 middle number (0.3.0). A fix raises the last one (0.2.2). `cargo test` fails
 if the newest entry here does not match the version in `Cargo.toml`.
 
+## 0.15.1 (21 Nov 2026)
+
+**Changed**
+- **The Mac build is two packages, one per kind of chip, instead of one
+  universal app.** `scripts/release.sh mac` now makes
+  `s01-monitor-<version>-mac-arm64` (Apple silicon, M1 and later) and
+  `s01-monitor-<version>-mac-x86_64` (Intel), each a folder and a zip with its
+  own README saying which Mac it is for and how to tell which you have. Both
+  are built for macOS 11 or later. This replaces the single `-mac.zip` of 0.15.0,
+  which was never published. The Intel package was started here under
+  Rosetta but has not been run on a real Intel Mac.
+
 ## 0.15.0 (21 Nov 2026)
 
 **Added**

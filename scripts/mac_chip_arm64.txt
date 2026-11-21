@@ -1,0 +1,6 @@
+Which Mac this is for
+---------------------
+This package is for Macs with an Apple silicon chip (M1 and later), macOS 11 or
+later. For an Intel Mac use the package with "x86_64" in its name. To see which
+you have: Apple menu, About This Mac. A line starting "Chip: Apple M..." means
+Apple silicon; "Processor: Intel ..." means Intel.

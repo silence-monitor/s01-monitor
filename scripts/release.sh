@@ -5,7 +5,9 @@
 #   scripts/release.sh TARGET [--dist DIR] [--skip-tests] [--allow-dirty] [--force]
 #
 #   TARGET          windows : dist-windows/s01-monitor-<version>-windows.zip
-#                   mac     : dist-mac/s01-monitor-<version>-mac.zip (one .app for Apple silicon and Intel)
+#                   mac     : two packages, each a folder and a zip with a .app:
+#                             dist-mac/s01-monitor-<version>-mac-arm64   (Apple silicon, M1 and later)
+#                             dist-mac/s01-monitor-<version>-mac-x86_64  (Intel)
 #                             (both zips carry the user guide, a PDF)
 #                   esp     : two packages, one per hardware, each a folder and a zip:
 #                             dist-esp/s01-monitor-<version>-esp-canbase   (ATOM Lite + Atomic CAN Base)
@@ -72,7 +74,21 @@ dist_for() { if [ -n "$DIST_OVERRIDE" ]; then echo "$DIST_OVERRIDE"; else echo "
 name_for() {
   case "$1" in
     windows) echo "s01-monitor-$VERSION-windows" ;;
-    mac) echo "s01-monitor-$VERSION-mac" ;;
+  esac
+}
+# The Mac has one package per kind of chip.
+MAC_VARIANTS=(arm64 x86_64)
+mac_name() { echo "s01-monitor-$VERSION-mac-$1"; }
+mac_triple() {
+  case "$1" in
+    arm64) echo "aarch64-apple-darwin" ;;
+    x86_64) echo "x86_64-apple-darwin" ;;
+  esac
+}
+mac_label() {
+  case "$1" in
+    arm64) echo "Mac build (Apple silicon)" ;;
+    x86_64) echo "Mac build (Intel)" ;;
   esac
 }
 # The ESP32 has one package per hardware.
@@ -108,6 +124,8 @@ NEWEST=$(grep -m1 '^## ' CHANGELOG.md | sed -E 's/^## +([^ ]+).*/\1/')
 for t in "${TARGETS[@]}"; do
   if [ "$t" = esp ]; then
     names=(); for v in "${ESP_VARIANTS[@]}"; do names+=("$(esp_name "$v")"); done
+  elif [ "$t" = mac ]; then
+    names=(); for v in "${MAC_VARIANTS[@]}"; do names+=("$(mac_name "$v")"); done
   else
     names=("$(name_for "$t")")
   fi
@@ -263,34 +281,33 @@ build_windows() {
 
 # --- Mac ----------------------------------------------------------------
 build_mac() {
-  local dist folder zip bin app work triple slice slices=()
-  dist=$(dist_for mac); folder="$dist/$(name_for mac)"; zip="$folder.zip"
-  # One program for both kinds of Mac: built once for Apple silicon and once for
-  # Intel, then joined with lipo. A separate target folder, so the build with
-  # remapped paths does not make your own 'cargo run --release' rebuild
-  # everything each time. Both are built for macOS 11, as the README says.
-  for triple in aarch64-apple-darwin x86_64-apple-darwin; do
-    step "Mac: building the program for $triple"
-    MACOSX_DEPLOYMENT_TARGET=11.0 CARGO_TARGET_DIR=target/dist-mac RUSTFLAGS="$REMAP" \
-      cargo build --release -p s01-monitor --target "$triple"
-    slice="target/dist-mac/$triple/release/s01-monitor"
-    [ -f "$slice" ] || fail "the build did not make $slice."
-    check_no_user "$slice" "the $triple program"
-    grep -q -- "$HOME" "$slice" && fail "the $triple program contains the home folder path."
-    grep -q -- "$ROOT_REL" "$slice" && fail "the $triple program contains the project folder path."
-    slices+=("$slice")
+  local variant
+  for variant in "${MAC_VARIANTS[@]}"; do
+    build_mac_variant "$variant" "$(dist_for mac)"
   done
-  step "Mac: joining them into one program"
-  bin="target/dist-mac/s01-monitor-universal"
-  lipo -create -output "$bin" "${slices[@]}"
-  [ "$(lipo -archs "$bin" | tr ' ' '\n' | sort | paste -sd' ' -)" = "arm64 x86_64" ] \
-    || fail "the joined program is for '$(lipo -archs "$bin")', not arm64 and x86_64."
+  step "Done: Mac"
+  echo "Built. Each package is for one kind of Mac; the README in each says how to tell which you have."
+}
+
+build_mac_variant() { # variant dist
+  local variant="$1" dist="$2" triple folder zip bin app work n
+  triple=$(mac_triple "$variant"); n=$(mac_name "$variant")
+  folder="$dist/$n"; zip="$folder.zip"
+  step "Mac ($variant): building the program for $triple"
+  # A separate target folder, so the build with remapped paths does not make
+  # your own 'cargo run --release' rebuild everything each time. Built for
+  # macOS 11, as the README says.
+  MACOSX_DEPLOYMENT_TARGET=11.0 CARGO_TARGET_DIR=target/dist-mac RUSTFLAGS="$REMAP" \
+    cargo build --release -p s01-monitor --target "$triple"
+  bin="target/dist-mac/$triple/release/s01-monitor"
+  [ -f "$bin" ] || fail "the build did not make $bin."
+  [ "$(lipo -archs "$bin")" = "$variant" ] || fail "the $variant program is for '$(lipo -archs "$bin")'."
   check_no_user "$bin" "the program"
   grep -q -- "$HOME" "$bin" && fail "the program contains the home folder path."
   grep -q -- "$ROOT_REL" "$bin" && fail "the program contains the project folder path."
-  echo "One program for Apple silicon and Intel; no user name or home folder in it."
+  echo "No user name or home folder in the program."
 
-  step "Mac: making the .app"
+  step "Mac ($variant): making the .app"
   fresh_folder "$dist" "$folder"
   app="$folder/Silence S01.app"
   mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
@@ -332,18 +349,20 @@ PLIST
   cp CHANGELOG.md "$folder/CHANGELOG.md"
   ensure_guide
   cp "$GUIDE" "$folder/User-Guide.pdf"
-  write_readme "$folder" scripts/mac_readme.txt "Mac build (Apple silicon and Intel)"
+  write_readme "$folder" scripts/mac_readme.txt "$(mac_label "$variant")"
+  # The README text is shared; the paragraph about which Mac it is for differs.
+  sed -e "/@MAC@/{r scripts/mac_chip_$variant.txt" -e 'd' -e '}' "$folder/README.txt" > "$folder/README.tmp" && mv "$folder/README.tmp" "$folder/README.txt"
+  grep -q '@MAC@' "$folder/README.txt" && fail "the README still has its @MAC@ placeholder."
   check_texts "$folder"
   check_listing "$folder" "CHANGELOG.md|README.txt|Silence S01.app|User-Guide.pdf"
   [ -z "$(find "$folder" -name .DS_Store -o -name '._*')" ] || fail "the folder has Finder leftovers in it."
 
-  step "Mac: zipping"
+  step "Mac ($variant): zipping"
   # ditto keeps the .app's permissions; the flags leave out the extra
   # metadata files (__MACOSX) and the quarantine mark.
   ditto -c -k --norsrc --noextattr --noqtn --noacl --keepParent "$folder" "$zip"
   local top
   top=$(unzip -Z1 "$zip" | awk -F/ 'NF >= 2 && $2 != "" { print $1 "/" $2 }' | C_ORDER | uniq | paste -sd'|' -)
-  local n; n=$(name_for mac)
   [ "$top" = "$n/CHANGELOG.md|$n/README.txt|$n/Silence S01.app|$n/User-Guide.pdf" ] || fail "the zip holds '$top', not just the app, README, guide and CHANGELOG."
   [ "$(unzip -Z1 "$zip" | grep -cE '__MACOSX|\.DS_Store|/\._')" -eq 0 ] || fail "the zip has Finder or metadata leftovers in it."
   # Open the zip as a person would, and check what comes out.
@@ -353,7 +372,7 @@ PLIST
   cmp -s "$work/$n/Silence S01.app/Contents/MacOS/s01-monitor" "$app/Contents/MacOS/s01-monitor" || fail "the program in the zip is not the one that was packaged."
   [ -x "$work/$n/Silence S01.app/Contents/MacOS/s01-monitor" ] || fail "the program in the zip is not executable."
   rm -rf "$work"
-  report_zip "$folder" "$zip" "Built on this Mac, one app for Apple silicon and Intel (the Intel half has not been run on an Intel Mac). Not signed by Apple, so macOS asks on first open."
+  report_zip "$folder" "$zip" "Built on this Mac for $variant. Not signed by Apple, so macOS asks on first open."
 }
 
 # --- ESP32 --------------------------------------------------------------
