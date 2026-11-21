@@ -15,8 +15,10 @@ and the notes on what is on that bus.
 
 ## What it is
 
-- **A desktop app** (Windows and macOS) written in Rust with `egui`. It talks
-  to the scooter through a CANable USB adapter running slcan firmware.
+- **A desktop app** for Windows (10 or 11, 64-bit) and macOS (11 or later),
+  written in Rust with `egui`. **Both Apple silicon (M1 and later) and Intel
+  Macs are supported**, with a separate download for each. It talks to the
+  scooter through a CANable USB adapter running slcan firmware.
 - **The same app in a browser**, compiled to WebAssembly and served by a small
   ESP32 unit (an M5 ATOM Lite with an Atomic CAN Base, or with a Unit CAN on
   its Grove port) that sits on the scooter and makes its own WiFi network. Open the page on a phone.
@@ -28,6 +30,24 @@ and the notes on what is on that bus.
   made by some other tools (candump, SavvyCAN CSV, Vector ASC) is experimental.
 - **[PROTOCOL.md](PROTOCOL.md)** is the byte layout of the frames, and
   **[CAN_NOTES.md](CAN_NOTES.md)** says how well each entry is known.
+
+## Downloads
+
+Ready-made packages are on the
+[Releases page](https://github.com/silence-monitor/s01-monitor/releases/latest):
+
+- **Windows**: `s01-monitor-<version>-windows.zip`.
+- **Mac, Apple silicon (M1 and later)**: `s01-monitor-<version>-mac-arm64.zip`.
+- **Mac, Intel**: `s01-monitor-<version>-mac-x86_64.zip`. This one is new and
+  has not yet been run on a real Intel Mac, so reports are welcome.
+- **ESP32**: one image for an M5 ATOM Lite with the Atomic CAN Base
+  (`...-esp-canbase.zip`) and one for an ATOM Lite with a Unit CAN on the Grove
+  port and an Atomic TF Card Base (`...-esp-grovecan-tfbase.zip`).
+
+The programs are not signed, so Windows and macOS warn the first time; the
+README in each zip says how to open it. To tell which Mac you have, open the
+Apple menu and choose About This Mac: "Chip: Apple M…" is Apple silicon,
+"Processor: Intel…" is Intel.
 
 ## Build and run
 
@@ -41,7 +61,8 @@ scripts/test_firmware_filter.sh           # a host test of the ESP32's send filt
 The browser build needs `rustup target add wasm32-unknown-unknown` and
 `cargo install wasm-bindgen-cli` at the version in `Cargo.lock`. The firmware
 (`firmware/`) is built with ESP-IDF 5.3; see [firmware/README.md](firmware/README.md).
-`scripts/release.sh` builds the Windows and Mac packages and the ESP32 image.
+`scripts/release.sh` builds the Windows package, the two Mac packages (Apple
+silicon and Intel) and the two ESP32 images.
 
 ## Safety notes
 
