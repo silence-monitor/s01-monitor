@@ -5,7 +5,7 @@
 #   scripts/release.sh TARGET [--dist DIR] [--skip-tests] [--allow-dirty] [--force]
 #
 #   TARGET          windows : dist-windows/s01-monitor-<version>-windows.zip
-#                   mac     : dist-mac/s01-monitor-<version>-mac-arm64.zip (a .app)
+#                   mac     : dist-mac/s01-monitor-<version>-mac.zip (one .app for Apple silicon and Intel)
 #                             (both zips carry the user guide, a PDF)
 #                   esp     : two packages, one per hardware, each a folder and a zip:
 #                             dist-esp/s01-monitor-<version>-esp-canbase   (ATOM Lite + Atomic CAN Base)
@@ -72,7 +72,7 @@ dist_for() { if [ -n "$DIST_OVERRIDE" ]; then echo "$DIST_OVERRIDE"; else echo "
 name_for() {
   case "$1" in
     windows) echo "s01-monitor-$VERSION-windows" ;;
-    mac) echo "s01-monitor-$VERSION-mac-arm64" ;;
+    mac) echo "s01-monitor-$VERSION-mac" ;;
   esac
 }
 # The ESP32 has one package per hardware.
@@ -150,8 +150,12 @@ for t in "${TARGETS[@]}"; do
     mac)
       need_chrome
       [ "$(uname -s)" = Darwin ] || fail "the Mac app can only be built on a Mac."
-      [ "$(uname -m)" = arm64 ] || fail "this builds the Apple silicon app, so it needs an Apple silicon Mac."
-      need codesign iconutil sips ditto plutil python3 unzip ;;
+      [ "$(uname -m)" = arm64 ] || fail "this builds the universal app from an Apple silicon Mac."
+      need codesign iconutil sips ditto plutil python3 unzip lipo
+      for triple in aarch64-apple-darwin x86_64-apple-darwin; do
+        rustup target list --installed 2>/dev/null | grep -qx "$triple" \
+          || fail "the Rust target is missing (rustup target add $triple)."
+      done ;;
     esp)
       IDF_EXPORT="${IDF_PATH:-$HOME/esp-idf}/export.sh"
       [ -f "$IDF_EXPORT" ] || fail "ESP-IDF was not found at $IDF_EXPORT (install v5.3.2, see firmware/README.md)."
@@ -259,18 +263,32 @@ build_windows() {
 
 # --- Mac ----------------------------------------------------------------
 build_mac() {
-  local dist folder zip bin app work
+  local dist folder zip bin app work triple slice slices=()
   dist=$(dist_for mac); folder="$dist/$(name_for mac)"; zip="$folder.zip"
-  step "Mac: building the app"
-  # A separate target folder, so the build with remapped paths does not make
-  # your own 'cargo run --release' rebuild everything each time.
-  CARGO_TARGET_DIR=target/dist-mac RUSTFLAGS="$REMAP" cargo build --release -p s01-monitor
-  bin="target/dist-mac/release/s01-monitor"
-  [ -f "$bin" ] || fail "the build did not make $bin."
+  # One program for both kinds of Mac: built once for Apple silicon and once for
+  # Intel, then joined with lipo. A separate target folder, so the build with
+  # remapped paths does not make your own 'cargo run --release' rebuild
+  # everything each time. Both are built for macOS 11, as the README says.
+  for triple in aarch64-apple-darwin x86_64-apple-darwin; do
+    step "Mac: building the program for $triple"
+    MACOSX_DEPLOYMENT_TARGET=11.0 CARGO_TARGET_DIR=target/dist-mac RUSTFLAGS="$REMAP" \
+      cargo build --release -p s01-monitor --target "$triple"
+    slice="target/dist-mac/$triple/release/s01-monitor"
+    [ -f "$slice" ] || fail "the build did not make $slice."
+    check_no_user "$slice" "the $triple program"
+    grep -q -- "$HOME" "$slice" && fail "the $triple program contains the home folder path."
+    grep -q -- "$ROOT_REL" "$slice" && fail "the $triple program contains the project folder path."
+    slices+=("$slice")
+  done
+  step "Mac: joining them into one program"
+  bin="target/dist-mac/s01-monitor-universal"
+  lipo -create -output "$bin" "${slices[@]}"
+  [ "$(lipo -archs "$bin" | tr ' ' '\n' | sort | paste -sd' ' -)" = "arm64 x86_64" ] \
+    || fail "the joined program is for '$(lipo -archs "$bin")', not arm64 and x86_64."
   check_no_user "$bin" "the program"
   grep -q -- "$HOME" "$bin" && fail "the program contains the home folder path."
   grep -q -- "$ROOT_REL" "$bin" && fail "the program contains the project folder path."
-  echo "No user name or home folder in the program."
+  echo "One program for Apple silicon and Intel; no user name or home folder in it."
 
   step "Mac: making the .app"
   fresh_folder "$dist" "$folder"
@@ -314,7 +332,7 @@ PLIST
   cp CHANGELOG.md "$folder/CHANGELOG.md"
   ensure_guide
   cp "$GUIDE" "$folder/User-Guide.pdf"
-  write_readme "$folder" scripts/mac_readme.txt "Mac build (Apple silicon)"
+  write_readme "$folder" scripts/mac_readme.txt "Mac build (Apple silicon and Intel)"
   check_texts "$folder"
   check_listing "$folder" "CHANGELOG.md|README.txt|Silence S01.app|User-Guide.pdf"
   [ -z "$(find "$folder" -name .DS_Store -o -name '._*')" ] || fail "the folder has Finder leftovers in it."
@@ -335,7 +353,7 @@ PLIST
   cmp -s "$work/$n/Silence S01.app/Contents/MacOS/s01-monitor" "$app/Contents/MacOS/s01-monitor" || fail "the program in the zip is not the one that was packaged."
   [ -x "$work/$n/Silence S01.app/Contents/MacOS/s01-monitor" ] || fail "the program in the zip is not executable."
   rm -rf "$work"
-  report_zip "$folder" "$zip" "Built on this Mac, for Apple silicon only. Not signed by Apple, so macOS asks on first open."
+  report_zip "$folder" "$zip" "Built on this Mac, one app for Apple silicon and Intel (the Intel half has not been run on an Intel Mac). Not signed by Apple, so macOS asks on first open."
 }
 
 # --- ESP32 --------------------------------------------------------------

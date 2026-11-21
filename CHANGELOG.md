@@ -10,6 +10,17 @@ new version and an entry here, in the same commit. A new feature raises the
 middle number (0.3.0). A fix raises the last one (0.2.2). `cargo test` fails
 if the newest entry here does not match the version in `Cargo.toml`.
 
+## 0.15.0 (21 Nov 2026)
+
+**Added**
+- **The Mac package now runs on Intel Macs too.** `scripts/release.sh mac` builds
+  the program for Apple silicon and for Intel, joins them into one app
+  (`Silence S01.app`, built for macOS 11 or later) and makes one zip,
+  `s01-monitor-<version>-mac.zip`, which replaces the Apple-silicon-only
+  `-mac-arm64.zip`. The script checks that the joined program holds both kinds
+  and that neither carries a user name or folder path. The Intel half was started
+  here under Rosetta but has not been tried on a real Intel Mac.
+
 ## 0.14.1 (20 Nov 2026)
 
 **Changed**
