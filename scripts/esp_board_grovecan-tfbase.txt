@@ -8,7 +8,8 @@ yellow wire) and GPIO 32 (RX, the white wire). The card's SPI pins are GPIO 19
 With a card of 16 GB or less in the base, the monitor page gets an SD card
 screen: card status, eject and format, a file browser with download, upload and
 delete, and a recording of the CAN bus to the card that can start by itself at
-power-up. The card has not been tried with this firmware on a bus yet.
+power-up. On one scooter's bus it recorded every frame to the card without losing
+one, including with the ECU's debug frames on (about 585 frames a second).
 
 Flash this image only on that hardware. On an ATOM Lite with the Atomic CAN
 Base it would listen on the wrong pins and see nothing; that hardware has its
@@ -18,5 +19,6 @@ hardware it was built for in the boot log ("Hardware: ...").
 A loose 120 ohm resistor comes in the Unit CAN's box. Leave it out on the
 scooter: the scooter's bus is already terminated.
 
-This pin choice has not been tried on a bus yet. If the monitor shows no
-frames with the Unit CAN connected, the CAN pins are the first thing to check.
+These pins have been tried on one scooter's bus, where receiving and sending
+both worked. If the monitor shows no frames with the Unit CAN connected, the
+CAN pins are the first thing to check.

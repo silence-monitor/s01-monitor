@@ -16,8 +16,8 @@ scooter's CAN bus to it. Decoding happens in the browser.
 
   The firmware cannot tell the two apart, so flash the image for the hardware.
   The boot log says which one it is ("Hardware: ..."). The Grove pins are the
-  ones the Unit CAN page and an ATOM Lite example use; they have not been tried
-  on a bus.
+  ones the Unit CAN page and an ATOM Lite example use. They were tried on one
+  scooter's bus on 23 Nov 2026 and receiving and sending both worked.
 * SD card (the `grovecan-tfbase` build only, `CONFIG_S01_HAS_SD`): the card is
   mounted over SPI with MOSI GPIO 19, MISO GPIO 33 and CLK GPIO 23 and no chip
   select (the base ties it to ground), at 10 MHz, FAT, 16 GB or smaller. The
@@ -49,7 +49,7 @@ scooter's CAN bus to it. Decoding happens in the browser.
   (which never waits), and writes the app's own capture format (`time:` lines)
   in 4 KB pieces, flushed every second, into `/recordings`. Paths and the
   recorder's text are in `main/sd_paths.h`, tested on the computer by
-  `test/sd_paths_test.cpp`. **Not tried on a real card yet.**
+  `test/sd_paths_test.cpp`. **Tried on a real card and a real bus (23 Nov 2026):** the card was formatted and mounted from the page, and the unit recorded the live bus to it without losing a frame, even at about 585 frames a second with the ECU's debug frames on. Uploads, downloads and deletes have not yet been tried on the real card.
 * Image size: about 2.1 MB in a 3 MB app partition (2.3 MB with the SD card code) (4 MB flash, no OTA updates)
 * Saved views: the custom views people create on the Live and Readings screens
   are kept on the device (`GET`/`PUT /views`, one small text list of at most
@@ -96,7 +96,7 @@ scooter's CAN bus to it. Decoding happens in the browser.
 
 ## Notes
 
-* This has been compiled but not run on hardware. The first run is the test.
+* The Unit CAN + TF base build has run on an ATOM Lite and on one scooter's bus (23 Nov 2026). The Atomic CAN Base build has been compiled and flashed but has not yet been on a bus.
 * If the upload cannot connect, M5 documents a download mode for ATOM boards
   (hold the side button while plugging in USB). Check their ATOM Lite page.
 * The Atomic CAN Base has no built-in termination, which is right for a bus

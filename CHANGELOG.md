@@ -10,6 +10,20 @@ new version and an entry here, in the same commit. A new feature raises the
 middle number (0.3.0). A fix raises the last one (0.2.2). `cargo test` fails
 if the newest entry here does not match the version in `Cargo.toml`.
 
+## 0.15.2 (23 Nov 2026)
+
+**Changed**
+- **The ESP32 notes and READMEs now say the Unit CAN + TF base version has run on
+  a scooter's bus.** It was tried on one scooter on 23 Nov 2026: the unit
+  received every frame with no missing beats, recorded the live bus to its card
+  without losing a frame (also at about 585 frames a second with the ECU's debug
+  frames on), a battery parameter read was answered in full, and a paged
+  event-log read came back complete with no controller fault. So the Grove pins
+  work for receiving and sending. This is the only scooter it has been tried
+  on, uploads, downloads and deletes on the card are not yet tried on real
+  hardware, and the Atomic CAN Base version has still not been on a bus.
+  The program itself is unchanged; only the text in the packages and the notes.
+
 ## 0.15.1 (21 Nov 2026)
 
 **Changed**
