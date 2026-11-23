@@ -410,6 +410,67 @@ pub fn parse_upload(text: &str) -> Upload {
     }
 }
 
+// ---- A recording fetched from the card to replay it ---------------------------
+
+/// The page keeps a whole recording in memory to replay it, and a phone has
+/// little to spare (the file is held a few times over while it plays), so a
+/// larger one is refused with a reason. A first guess, not a measured limit.
+pub const REPLAY_MAX_BYTES: u64 = 32_000_000;
+
+/// The file types the replay can read (see `formats.rs`).
+const REPLAY_EXTENSIONS: [&str; 4] = ["log", "txt", "csv", "asc"];
+
+/// Why a recording of this size cannot be replayed in the page, if it cannot.
+pub fn replay_problem(size: u64) -> Option<String> {
+    (size > REPLAY_MAX_BYTES).then(|| {
+        format!(
+            "Too large to replay in the page ({}; the limit is {}). Download it and replay it on a computer.",
+            size_text(size),
+            size_text(REPLAY_MAX_BYTES)
+        )
+    })
+}
+
+/// A file the replay could read, judged by its name.
+pub fn is_recording_name(name: &str) -> bool {
+    name.rsplit_once('.')
+        .is_some_and(|(stem, ext)| !stem.is_empty() && REPLAY_EXTENSIONS.contains(&ext.to_ascii_lowercase().as_str()))
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub enum Fetch {
+    #[default]
+    Idle,
+    Loading {
+        name: String,
+        done: u64,
+        total: u64,
+    },
+    Ready {
+        name: String,
+    },
+    Failed {
+        name: String,
+        why: String,
+    },
+}
+
+/// The page keeps this as one text: `idle`, `loading|name|done|total`,
+/// `ready|name` or `failed|name|why`.
+pub fn parse_fetch(text: &str) -> Fetch {
+    let parts: Vec<&str> = text.split('|').collect();
+    match parts.as_slice() {
+        ["loading", name, done, total] => Fetch::Loading {
+            name: name.to_string(),
+            done: done.parse().unwrap_or(0),
+            total: total.parse().unwrap_or(0),
+        },
+        ["ready", name] => Fetch::Ready { name: name.to_string() },
+        ["failed", name, why @ ..] => Fetch::Failed { name: name.to_string(), why: why.join("|") },
+        _ => Fetch::Idle,
+    }
+}
+
 // ---- The mailbox -------------------------------------------------------------
 
 static ANSWERS: Mutex<Vec<Answer>> = Mutex::new(Vec::new());
@@ -425,7 +486,7 @@ pub fn take_answers() -> Vec<Answer> {
 
 #[cfg(not(target_arch = "wasm32"))]
 mod backend {
-    use super::{post_answer, Answer, Request, Upload};
+    use super::{post_answer, Answer, Fetch, Request, Upload};
 
     pub fn send(request: Request) {
         post_answer(Answer {
@@ -446,6 +507,18 @@ mod backend {
 
     pub fn clear_upload() {}
 
+    pub fn fetch_start(_path: &str, _total: u64) {}
+
+    pub fn fetch_state() -> Fetch {
+        Fetch::Idle
+    }
+
+    pub fn fetch_take() -> Option<Vec<u8>> {
+        None
+    }
+
+    pub fn fetch_reset() {}
+
     pub fn local_seconds() -> Option<i64> {
         None
     }
@@ -453,7 +526,7 @@ mod backend {
 
 #[cfg(target_arch = "wasm32")]
 mod backend {
-    use super::{parse_upload, post_answer, Answer, Request, Upload};
+    use super::{parse_fetch, parse_upload, post_answer, Answer, Fetch, Request, Upload, REPLAY_MAX_BYTES};
     use eframe::wasm_bindgen::{JsCast, JsValue};
     use js_sys::{Function, Reflect};
     use wasm_bindgen_futures::JsFuture;
@@ -532,6 +605,42 @@ mod backend {
         }
     }
 
+    /// Starts the page fetching a file from the card into memory, to replay it.
+    /// `total` is the size the folder listing gave (the unit sends the file in
+    /// pieces and does not say its length).
+    pub fn fetch_start(path: &str, total: u64) {
+        if let Some((store, function)) = helper("fetchStart") {
+            let _ = function.call3(
+                &store,
+                &JsValue::from_str(path),
+                &JsValue::from_f64(total as f64),
+                &JsValue::from_f64(REPLAY_MAX_BYTES as f64),
+            );
+        }
+    }
+
+    pub fn fetch_state() -> Fetch {
+        helper("fetchState")
+            .and_then(|(store, function)| function.call0(&store).ok())
+            .and_then(|value| value.as_string())
+            .map(|text| parse_fetch(&text))
+            .unwrap_or_default()
+    }
+
+    /// The bytes of a finished fetch, once; the page forgets them.
+    pub fn fetch_take() -> Option<Vec<u8>> {
+        let (store, function) = helper("fetchTake")?;
+        let value = function.call0(&store).ok()?;
+        value.dyn_into::<js_sys::Uint8Array>().ok().map(|array| array.to_vec())
+    }
+
+    /// Stops a fetch that is running and forgets its state.
+    pub fn fetch_reset() {
+        if let Some((store, function)) = helper("fetchReset") {
+            let _ = function.call0(&store);
+        }
+    }
+
     /// This device's local time as seconds since 1970, taken as if it were UTC.
     pub fn local_seconds() -> Option<i64> {
         let now = js_sys::Date::new_0();
@@ -546,11 +655,39 @@ pub fn leaf(path: &str) -> &str {
     path.rsplit('/').next().unwrap_or(path)
 }
 
-pub use backend::{clear_upload, download, local_seconds, pick_upload, send, upload_state};
+pub use backend::{
+    clear_upload, download, fetch_reset, fetch_start, fetch_state, fetch_take, local_seconds, pick_upload, send, upload_state,
+};
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_fetch_state_text_is_read_back() {
+        assert_eq!(parse_fetch("idle"), Fetch::Idle);
+        assert_eq!(parse_fetch("nonsense"), Fetch::Idle);
+        assert_eq!(parse_fetch("loading|a.log|10|200"), Fetch::Loading { name: "a.log".into(), done: 10, total: 200 });
+        assert_eq!(parse_fetch("ready|a.log"), Fetch::Ready { name: "a.log".into() });
+        assert_eq!(
+            parse_fetch("failed|a.log|this file is being recorded; stop the recording first"),
+            Fetch::Failed { name: "a.log".into(), why: "this file is being recorded; stop the recording first".into() }
+        );
+        assert_eq!(parse_fetch("failed|a.log|x|y"), Fetch::Failed { name: "a.log".into(), why: "x|y".into() });
+    }
+
+    #[test]
+    fn only_recording_files_of_a_sensible_size_get_a_replay_button() {
+        for name in ["rec-1.log", "A.LOG", "x.csv", "notes.txt", "bus.asc"] {
+            assert!(is_recording_name(name), "{name}");
+        }
+        for name in ["firmware.bin", "log", ".log", "photo.jpg", "a.log.bak", "dir"] {
+            assert!(!is_recording_name(name), "{name}");
+        }
+        assert!(replay_problem(REPLAY_MAX_BYTES).is_none());
+        let why = replay_problem(40_000_000).expect("too large");
+        assert!(why.contains("Too large") && why.contains("40.0 MB") && why.contains("32.0 MB") && why.contains("computer"), "{why}");
+    }
 
     #[test]
     fn info_says_whether_there_is_a_card() {

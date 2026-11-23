@@ -10,6 +10,24 @@ new version and an entry here, in the same commit. A new feature raises the
 middle number (0.3.0). A fix raises the last one (0.2.2). `cargo test` fails
 if the newest entry here does not match the version in `Cargo.toml`.
 
+## 0.17.0 (23 Nov 2026)
+
+**Added**
+- **Replay a recording straight from the unit's SD card.** On the SD card screen
+  (the ESP32 version with the card base), a recording on the card (a `.log`,
+  `.txt`, `.csv` or `.asc` file) now has a **Replay** button beside Download.
+  The page loads the file from the unit, with a progress bar and a Cancel
+  button, and plays it with the usual replay controls, so a recording no longer
+  has to be downloaded to the phone and picked again. The page keeps the whole
+  file in memory, so a file over 32 MB is refused with a reason (its button is
+  greyed out; download it and replay it on a computer). The file the unit is
+  still recording cannot be replayed until the recording is stopped. The unit's
+  firmware is unchanged; only the page is new, so the browser page on the unit
+  needs updating (rebuild the page and flash) to have it. Tried only against the
+  pretend card in `scripts/web_bridge.py --sd` (a 0.9 MB recording loaded and
+  played; a missing file, a file that is too large and Cancel behave as
+  described), not yet against a real card.
+
 ## 0.16.0 (23 Nov 2026)
 
 **Added**

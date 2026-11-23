@@ -14,7 +14,9 @@ firmware/dependencies.lock
 /dist-windows/
 /dist-mac/
 /dist-esp/
+/dist-linux/
 *.zip
+*.deb
 
 # macOS
 .DS_Store

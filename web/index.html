@@ -301,7 +301,71 @@
       document.body.appendChild(input);
       input.click();
     }
-    return { pick, state: () => current, clear: () => { current = "idle"; } };
+    // Fetching a recording from the card into memory, to replay it. The unit
+    // sends a file in pieces and does not say how long it is, so the caller
+    // passes the size from the folder listing (for the progress bar only).
+    // State text: idle, loading|name|done|total, ready|name, failed|name|why.
+    let fetched = null;
+    let fetchState = "idle";
+    let fetchAbort = null;
+    const plain = (text) => String(text).replace(/\|/g, "/");
+    async function fetchStart(path, total, max) {
+      if (fetchAbort) fetchAbort.abort();
+      const abort = new AbortController();
+      fetchAbort = abort;
+      fetched = null;
+      const name = plain(path.split("/").pop());
+      fetchState = "loading|" + name + "|0|" + total;
+      const fail = (why) => { fetchState = "failed|" + name + "|" + plain(why); };
+      try {
+        const response = await fetch("/sd/file?path=" + encodeURIComponent(path), { cache: "no-store", signal: abort.signal });
+        if (!response.ok) {
+          fail((await response.text()).trim() || "the unit answered " + response.status);
+          return;
+        }
+        const reader = response.body.getReader();
+        const chunks = [];
+        let done = 0;
+        for (;;) {
+          const part = await reader.read();
+          if (part.done) break;
+          chunks.push(part.value);
+          done += part.value.length;
+          if (done > max) {
+            abort.abort();
+            fail("too large to replay in the page");
+            return;
+          }
+          fetchState = "loading|" + name + "|" + done + "|" + Math.max(total, done);
+        }
+        const bytes = new Uint8Array(done);
+        let at = 0;
+        for (const chunk of chunks) { bytes.set(chunk, at); at += chunk.length; }
+        fetched = bytes;
+        fetchState = "ready|" + name;
+      } catch (err) {
+        if (abort.signal.aborted) return; // cancelled, or already reported
+        fail("the connection to the unit was lost");
+      } finally {
+        if (fetchAbort === abort) fetchAbort = null;
+      }
+    }
+    function fetchTake() {
+      const bytes = fetched;
+      fetched = null;
+      fetchState = "idle";
+      return bytes;
+    }
+    function fetchReset() {
+      if (fetchAbort) fetchAbort.abort();
+      fetchAbort = null;
+      fetched = null;
+      fetchState = "idle";
+    }
+    return {
+      pick, state: () => current, clear: () => { current = "idle"; },
+      fetchStart, fetchState: () => fetchState, fetchTake, fetchReset,
+    };
   })();
 </script>
 <script type="module">

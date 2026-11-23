@@ -13,7 +13,7 @@ use eframe::egui::{self, Button, RichText, TextEdit};
 use web_time::{Duration, Instant};
 
 use super::{action_button, card, MonitorApp, ALARM, GOOD, INK, MUTED, WARN};
-use crate::sdcard::{self, Answer, CardState, Kind, Listing, Request, Status, Upload};
+use crate::sdcard::{self, Answer, CardState, Fetch, Kind, Listing, Request, Status, Upload};
 
 const STATUS_EVERY: Duration = Duration::from_secs(2);
 const TIME_EVERY: Duration = Duration::from_secs(300);
@@ -55,6 +55,9 @@ pub struct SdScreen {
     pub new_folder: String,
     pub upload: Upload,
     upload_at: Option<Instant>,
+    /// A recording being fetched from the card to replay it.
+    pub fetch: Fetch,
+    fetch_at: Option<Instant>,
     last_busy: Option<String>,
     last_state: CardState,
     /// The file of a recording on the card that this page stopped, so it can be downloaded.
@@ -84,6 +87,8 @@ impl Default for SdScreen {
             new_folder: String::new(),
             upload: Upload::Idle,
             upload_at: None,
+            fetch: Fetch::Idle,
+            fetch_at: None,
             last_busy: None,
             last_state: CardState::Unknown,
             saved: None,
@@ -239,6 +244,34 @@ impl SdScreen {
         self.upload = state;
     }
 
+    /// A recording is about to be fetched for replay.
+    pub fn start_fetch(&mut self, name: &str, total: u64) {
+        self.note = None;
+        self.fetch_at = None;
+        self.fetch = Fetch::Loading { name: name.to_string(), done: 0, total };
+    }
+
+    /// Takes in how the fetch the page is making stands. A failure becomes a
+    /// note; a finished fetch is for the app to take and play.
+    pub fn apply_fetch(&mut self, now: Instant, state: Fetch) {
+        self.fetch_at = Some(now);
+        if let Fetch::Failed { name, why } = &state {
+            let why = why.trim();
+            self.note = Some((format!("Could not load {name} to replay it: {}", if why.is_empty() { "the unit refused it" } else { why }), true));
+            self.list_wanted = true;
+            self.status_at = None;
+        }
+        self.fetch = state;
+    }
+
+    pub fn fetching(&self) -> bool {
+        matches!(self.fetch, Fetch::Loading { .. })
+    }
+
+    pub fn wants_fetch_poll(&self, now: Instant) -> bool {
+        self.fetching() && self.fetch_at.map_or(true, |at| now.duration_since(at) >= Duration::from_millis(250))
+    }
+
     pub fn wants_upload_poll(&self, now: Instant, visible: bool) -> bool {
         let sending = matches!(self.upload, Upload::Sending { .. });
         (sending || visible) && self.upload_at.map_or(true, |at| now.duration_since(at) >= Duration::from_millis(300))
@@ -252,7 +285,7 @@ impl SdScreen {
 
     /// True while the unit is doing something that should not be interrupted.
     pub fn busy(&self) -> bool {
-        self.status.busy.is_some() || matches!(self.upload, Upload::Sending { .. })
+        self.status.busy.is_some() || matches!(self.upload, Upload::Sending { .. }) || self.fetching()
     }
 }
 
@@ -284,6 +317,29 @@ impl MonitorApp {
                 sdcard::clear_upload();
             }
             self.sd.apply_upload(now, state);
+        }
+        if self.sd.wants_fetch_poll(now) {
+            match sdcard::fetch_state() {
+                Fetch::Ready { name } => {
+                    match sdcard::fetch_take() {
+                        Some(bytes) => {
+                            self.sd.fetch = Fetch::Idle;
+                            self.sd.note = Some((
+                                format!("Replaying {name}. The play controls are at the top of every screen; press Stop replay to end it."),
+                                false,
+                            ));
+                            self.begin_replay(super::Again::Data(name, bytes));
+                        }
+                        None => self.sd.apply_fetch(now, Fetch::Failed { name, why: "the page lost the file".into() }),
+                    }
+                }
+                state => {
+                    if matches!(state, Fetch::Failed { .. }) {
+                        sdcard::fetch_reset();
+                    }
+                    self.sd.apply_fetch(now, state);
+                }
+            }
         }
         for request in self.sd.tick(now, visible, sdcard::local_seconds()) {
             sdcard::send(request);
@@ -552,7 +608,7 @@ impl MonitorApp {
             ui.add_space(4.0);
             ui.label(
                 RichText::new(
-                    "Recordings are text files in the recordings folder, in the format this app records. Download one and replay it with Replay a capture.",
+                    "Recordings are text files in the recordings folder, in the format this app records. Press Replay beside one to play it back here (files over 32 MB are too large for the page; download those and replay them on a computer). Replaying ends the live connection. A recording the unit is still making cannot be replayed until it is stopped.",
                 )
                 .size(12.0)
                 .color(MUTED),
@@ -619,10 +675,22 @@ impl MonitorApp {
         }
         let mut open: Option<String> = None;
         let mut download: Option<String> = None;
+        let mut replay: Option<(String, u64)> = None;
         let mut delete: Option<(String, bool)> = None;
+        let fetching = self.sd.fetching();
         let mut buttons = |ui: &mut egui::Ui, entry: &sdcard::Entry| {
             let target = sdcard::join(path, &entry.name);
             ui.horizontal(|ui| {
+                if !entry.dir && sdcard::is_recording_name(&entry.name) {
+                    let problem = sdcard::replay_problem(entry.size);
+                    let response = action_button(ui, "Replay", problem.is_none() && !busy && !fetching);
+                    if response.clicked() {
+                        replay = Some((target.clone(), entry.size));
+                    }
+                    if let Some(why) = problem {
+                        response.on_disabled_hover_text(why);
+                    }
+                }
                 if !entry.dir && ui.button("Download").clicked() {
                     download = Some(target.clone());
                 }
@@ -670,6 +738,10 @@ impl MonitorApp {
         if let Some(target) = open {
             self.sd.open(&target);
         }
+        if let Some((target, size)) = replay {
+            self.sd.start_fetch(sdcard::leaf(&target), size);
+            sdcard::fetch_start(&target, size);
+        }
         if let Some(target) = download {
             sdcard::download(&target);
             self.sd.note = Some((format!("Download started: your browser will save {}.", sdcard::leaf(&target)), false));
@@ -712,6 +784,23 @@ impl MonitorApp {
                 ui.label(RichText::new("Names: plain letters, digits, spaces and . _ - ( ) only.").size(12.0).color(MUTED));
             }
         });
+        if let Fetch::Loading { name, done, total } = self.sd.fetch.clone() {
+            ui.add_space(4.0);
+            ui.horizontal_wrapped(|ui| {
+                let fraction = if total > 0 { done as f32 / total as f32 } else { 0.0 };
+                ui.label(RichText::new(format!("Loading {name} to replay:")).size(12.0).color(MUTED));
+                ui.add(
+                    egui::ProgressBar::new(fraction.clamp(0.0, 1.0))
+                        .desired_width(200.0)
+                        .text(format!("{} of {}", sdcard::size_text(done), sdcard::size_text(total))),
+                );
+                if ui.button("Cancel").clicked() {
+                    sdcard::fetch_reset();
+                    self.sd.fetch = Fetch::Idle;
+                    self.sd.note = None;
+                }
+            });
+        }
     }
 
     /// Asks before something is erased, and sends it on a yes.
@@ -968,6 +1057,36 @@ mod tests {
         assert!(s.list_wanted);
         s.apply_upload(now, Upload::Failed { name: "b.bin".into(), why: "the card is full".into() });
         assert_eq!(s.note, Some(("Could not upload b.bin: the card is full".to_string(), true)));
+    }
+
+    #[test]
+    fn a_fetch_for_replay_shows_progress_and_blocks_other_actions() {
+        let mut s = ready_screen();
+        let now = Instant::now();
+        s.start_fetch("rec.log", 1000);
+        assert!(s.fetching() && s.busy());
+        assert!(s.wants_fetch_poll(now), "first look at once");
+        s.apply_fetch(now, Fetch::Loading { name: "rec.log".into(), done: 400, total: 1000 });
+        assert!(!s.wants_fetch_poll(now), "too soon");
+        assert!(s.wants_fetch_poll(now + Duration::from_millis(300)));
+        s.apply_fetch(now, Fetch::Ready { name: "rec.log".into() });
+        assert!(!s.fetching(), "a finished fetch is for the app to take");
+        assert!(!s.wants_fetch_poll(now + Duration::from_secs(1)));
+    }
+
+    #[test]
+    fn a_fetch_that_fails_says_why_in_words() {
+        let mut s = ready_screen();
+        let now = Instant::now();
+        s.start_fetch("rec.log", 1000);
+        s.apply_fetch(now, Fetch::Failed { name: "rec.log".into(), why: "this file is being recorded; stop the recording first".into() });
+        assert!(!s.busy());
+        assert_eq!(
+            s.note,
+            Some(("Could not load rec.log to replay it: this file is being recorded; stop the recording first".to_string(), true))
+        );
+        s.apply_fetch(now, Fetch::Failed { name: "b.log".into(), why: "  ".into() });
+        assert_eq!(s.note, Some(("Could not load b.log to replay it: the unit refused it".to_string(), true)));
     }
 
     #[test]
