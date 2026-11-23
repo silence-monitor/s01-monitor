@@ -10,6 +10,16 @@ new version and an entry here, in the same commit. A new feature raises the
 middle number (0.3.0). A fix raises the last one (0.2.2). `cargo test` fails
 if the newest entry here does not match the version in `Cargo.toml`.
 
+## 0.17.1 (23 Nov 2026)
+
+**Changed**
+- **The ESP32 packages' README now explains flashing with ESP Launchpad**, the web
+  page Espressif provides for flashing from Chrome or Edge with nothing to
+  install, as an alternative to the esptool command (useful on Windows). It lists
+  the three files and their addresses (0x1000, 0x8000, 0x20000). This route has
+  not been tried with these files yet. Text only: the firmware and the browser
+  page are unchanged.
+
 ## 0.17.0 (23 Nov 2026)
 
 **Added**

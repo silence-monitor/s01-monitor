@@ -44,5 +44,29 @@ Nothing here flashes by itself. When you want this build on the ESP32:
 The saved views live in a separate part of the flash (the nvs partition at
 0x9000) that this does not touch, so they survive.
 
+
+Without the ESP-IDF tools: ESP Launchpad (any computer, including Windows)
+-------------------------------------------------------------------------
+Espressif's ESP Launchpad flashes from a web page, with nothing to install:
+https://espressif.github.io/esp-launchpad/
+
+1. Use Google Chrome or Microsoft Edge (it needs "Web Serial"; Firefox and
+   Safari do not have it). Close anything else that has the unit's serial
+   port open.
+2. Plug the unit in with a USB cable. On Windows it may need the USB-serial
+   driver for the unit before a COM port appears (see Device Manager).
+3. On the page, choose the "DIY" mode (your own firmware files, from this
+   computer), press Connect and pick the unit's port.
+4. Add the three files from this folder, each at its address:
+       bootloader.bin         at 0x1000
+       partition-table.bin    at 0x8000
+       s01-monitor-esp32.bin  at 0x20000
+5. Press Flash and wait; it takes a few minutes. Press the unit's reset
+   button or unplug and replug it afterwards.
+
+The same files, the same addresses and the same saved views as above. This
+route has not been tried with these files yet, so if a step on the page looks
+different, go by the addresses.
+
 This image has not been put on the scooter's CAN bus by this script. The
 version is printed in the boot log ("App version").
