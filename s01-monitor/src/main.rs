@@ -32,6 +32,7 @@ mod views;
 fn main() -> eframe::Result {
     let native_options = eframe::NativeOptions {
         viewport: eframe::egui::ViewportBuilder::default()
+            .with_app_id("s01-monitor")
             .with_inner_size([1180.0, 860.0])
             .with_min_inner_size([360.0, 520.0]),
         ..Default::default()

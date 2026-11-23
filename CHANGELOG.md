@@ -10,6 +10,30 @@ new version and an entry here, in the same commit. A new feature raises the
 middle number (0.3.0). A fix raises the last one (0.2.2). `cargo test` fails
 if the newest entry here does not match the version in `Cargo.toml`.
 
+## 0.16.0 (23 Nov 2026)
+
+**Added**
+- **A Linux package for Ubuntu: `s01-monitor-<version>-linux-amd64.deb`.** For Ubuntu
+  22.04 or later (and other Debian-based systems with glibc 2.35 or later) on a
+  64-bit Intel or AMD computer. Install it with
+  `sudo apt install ./s01-monitor-<version>-linux-amd64.deb`; it adds
+  "Silence S01 monitor" to the applications menu and puts the README, the user
+  guide and this changelog in `/usr/share/doc/s01-monitor/`. The README explains
+  how to give your user access to the adapter (the `dialout` group) and what to
+  do if Ubuntu's modem service interferes with it. It was built on a Mac and
+  **has not yet been run on Linux**, so reports are welcome.
+- `scripts/release.sh linux` builds it with the same checks as the other
+  packages (tests, matching changelog entry, no user name or folder in the
+  program, exactly the expected files), and `scripts/check_deb.py` opens the
+  finished package to check its contents, owners, dates and control fields.
+
+**Changed**
+- The serial port library is now built without its `libudev` feature. On Linux
+  it finds ports by looking in `/sys/class/tty` instead, which needs no extra
+  libraries; Windows and Mac are not affected.
+- The window now announces itself to Linux desktops as `s01-monitor`, so the
+  applications menu entry and the window match.
+
 ## 0.15.2 (23 Nov 2026)
 
 **Changed**

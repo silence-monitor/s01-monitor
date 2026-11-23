@@ -122,7 +122,7 @@
 
 <h3>What you need</h3>
 <ul>
-  <li><b>Desktop app:</b> a Windows 10 or 11 computer (64-bit), or a Mac running macOS 11 or later, with an Apple silicon chip (M1 or later) or an Intel chip; there is one zip for each. Nothing to install.</li>
+  <li><b>Desktop app:</b> a Windows 10 or 11 computer (64-bit), or a Mac running macOS 11 or later, with an Apple silicon chip (M1 or later) or an Intel chip; there is one zip for each. Nothing to install. On <b>Ubuntu</b> 22.04 or later (64-bit Intel or AMD) there is a <code>.deb</code> package instead.</li>
   <li><b>To read a real scooter:</b> a <b>CANable</b> USB adapter with &ldquo;slcan&rdquo; firmware, connected to the scooter's CAN connector (the bus runs at
       250 kbit/s), or the ESP32 unit. This guide does not cover wiring. Only connect something to the scooter when you know how
       its connector is wired.</li>
@@ -137,6 +137,7 @@ Windows may say &ldquo;Windows protected your PC&rdquo;. Click <b>More info</b>,
 <p><b>Mac:</b> unzip the folder and double-click <span class="name">Silence S01</span> (you can drag it to Applications first). The first time,
 macOS says it cannot check the app. Right-click (or Control-click) it, choose <b>Open</b>, then <b>Open</b> again. If it still
 refuses, open System Settings, Privacy &amp; Security, scroll down and press <b>Open Anyway</b>. You only do this once.</p>
+<p><b>Ubuntu:</b> in a terminal, in the folder that holds the file, run <code>sudo apt install ./s01-monitor-&hellip;-linux-amd64.deb</code>, then start <b>Silence S01 monitor</b> from the applications menu. To use a CANable adapter your user must be in the <code>dialout</code> group; the README in <code>/usr/share/doc/s01-monitor/</code> says how.</p>
 <p><b>Browser page:</b> join the WiFi network <span class="name">S01-Monitor</span> from the device you want to use (the password is the one
 set in the unit's firmware), then open <span class="name">http://192.168.4.1/</span>. On an iPhone you can use the Share button and
 <b>Add to Home Screen</b> to open it like an app, without Safari's bars.</p>
@@ -152,7 +153,7 @@ set in the unit's firmware), then open <span class="name">http://192.168.4.1/</s
 <h3>Connect to a scooter</h3>
 <ol class="steps">
   <li><b>Desktop:</b> plug in the CANable. Pick its port in the box at the top (on a Mac it looks like <code>/dev/cu.usbmodem&hellip;</code>, on Windows
-      like <code>COM3</code>). The adapter may need its Windows driver installed first.<br>
+      like <code>COM3</code>, on Ubuntu like <code>/dev/ttyACM0</code>). The adapter may need its Windows driver installed first.<br>
       <b>Browser page:</b> the box already holds the unit's address, <code>ws://&hellip;/ws</code>.</li>
   <li>Press <b>Connect</b>. The line under the title changes to &ldquo;Connected&rdquo;, and the screens start to move.</li>
   <li>Press <b>Disconnect</b> when you are done. If the connection stops by itself, the app says &ldquo;The connection stopped unexpectedly&rdquo;; press

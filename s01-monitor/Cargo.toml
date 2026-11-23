@@ -16,7 +16,7 @@ libc = "0.2"
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 eframe = "0.37"
 rfd = "0.15"
-serialport = "4.10"
+serialport = { version = "4.10", default-features = false }
 
 # The browser build. Only the glow renderer, and no bundled font set: the
 # app loads the one font it needs, which keeps the download small.
@@ -31,3 +31,29 @@ web-sys = { version = "0.3", features = [
     "BlobPropertyBag", "Url", "WebSocket", "MessageEvent", "CloseEvent", "BinaryType",
     "RequestInit", "RequestCache", "Response",
 ] }
+
+# The Ubuntu / Debian package (scripts/release.sh linux). cargo-deb only
+# packages: release.sh builds the program with zigbuild and stages the icon,
+# README, guide and changelog in target/dist-linux/stage first. The libraries
+# the window needs are loaded when the program starts, so they are named here.
+[package.metadata.deb]
+name = "s01-monitor"
+maintainer = "S01 Monitor contributors <noreply@example.invalid>"
+copyright = "2026, S01 Monitor contributors"
+section = "utils"
+priority = "optional"
+extended-description = """\
+Live dashboard for the CAN bus of a Silence S01 (SEAT MO) electric scooter.
+Unofficial. It talks to the scooter through a CANable USB adapter with slcan
+firmware, and can also replay recordings."""
+depends = "libc6 (>= 2.35), libxkbcommon0, libxkbcommon-x11-0, libx11-6, libxcursor1, libxi6, libegl1 | libgl1"
+recommends = "libvulkan1, libwayland-client0, xdg-desktop-portal"
+assets = [
+    ["target/release/s01-monitor", "usr/bin/s01-monitor", "755"],
+    ["../scripts/linux/s01-monitor.desktop", "usr/share/applications/s01-monitor.desktop", "644"],
+    ["../target/dist-linux/stage/s01-monitor.png", "usr/share/icons/hicolor/256x256/apps/s01-monitor.png", "644"],
+    ["../scripts/linux/copyright", "usr/share/doc/s01-monitor/copyright", "644"],
+    ["../target/dist-linux/stage/README.txt", "usr/share/doc/s01-monitor/README.txt", "644"],
+    ["../target/dist-linux/stage/CHANGELOG.md", "usr/share/doc/s01-monitor/CHANGELOG.md", "644"],
+    ["../target/dist-linux/stage/User-Guide.pdf", "usr/share/doc/s01-monitor/User-Guide.pdf", "644"],
+]

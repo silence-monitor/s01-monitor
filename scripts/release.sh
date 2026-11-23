@@ -12,7 +12,9 @@
 #                   esp     : two packages, one per hardware, each a folder and a zip:
 #                             dist-esp/s01-monitor-<version>-esp-canbase   (ATOM Lite + Atomic CAN Base)
 #                             dist-esp/s01-monitor-<version>-esp-grovecan-tfbase  (ATOM Lite + Unit CAN on the Grove port + TF Card Base)
-#                   all     : all three
+#                   linux   : dist-linux/s01-monitor-<version>-linux-amd64.deb (Ubuntu 22.04 or later,
+#                             Debian-based, 64-bit Intel or AMD; built on the Mac with zigbuild, not run here)
+#                   all     : all four
 #   --dist DIR      put the output in DIR instead of dist-<target>
 #   --skip-tests    do not run the tests first
 #   --allow-dirty   build even though there are uncommitted changes
@@ -45,17 +47,17 @@ while [ $# -gt 0 ]; do
     --skip-tests) RUN_TESTS=0 ;;
     --allow-dirty) ALLOW_DIRTY=1 ;;
     --force) FORCE=1 ;;
-    -h|--help) sed -n '2,26p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,28p' "$0"; exit 0 ;;
     -*) echo "Unknown option: $1 (try --help)" >&2; exit 2 ;;
     *) [ -z "$TARGET" ] || { echo "Only one target at a time: $TARGET or $1" >&2; exit 2; }; TARGET="$1" ;;
   esac
   shift
 done
 case "$TARGET" in
-  windows|mac|esp) TARGETS=("$TARGET") ;;
-  all) TARGETS=(windows mac esp) ;;
-  "") echo "Say what to build: windows, mac, esp or all (try --help)" >&2; exit 2 ;;
-  *) echo "Unknown target: $TARGET (windows, mac, esp or all)" >&2; exit 2 ;;
+  windows|mac|esp|linux) TARGETS=("$TARGET") ;;
+  all) TARGETS=(windows mac linux esp) ;;
+  "") echo "Say what to build: windows, mac, linux, esp or all (try --help)" >&2; exit 2 ;;
+  *) echo "Unknown target: $TARGET (windows, mac, linux, esp or all)" >&2; exit 2 ;;
 esac
 
 fail() { echo "STOPPED: $*" >&2; exit 1; }
@@ -74,8 +76,12 @@ dist_for() { if [ -n "$DIST_OVERRIDE" ]; then echo "$DIST_OVERRIDE"; else echo "
 name_for() {
   case "$1" in
     windows) echo "s01-monitor-$VERSION-windows" ;;
+    linux) echo "s01-monitor-$VERSION-linux-amd64.deb" ;;
   esac
 }
+# The Linux program is built for this glibc, so it runs on Ubuntu 22.04 or later.
+LINUX_TRIPLE=x86_64-unknown-linux-gnu
+LINUX_GLIBC=2.35
 # The Mac has one package per kind of chip.
 MAC_VARIANTS=(arm64 x86_64)
 mac_name() { echo "s01-monitor-$VERSION-mac-$1"; }
@@ -174,6 +180,13 @@ for t in "${TARGETS[@]}"; do
         rustup target list --installed 2>/dev/null | grep -qx "$triple" \
           || fail "the Rust target is missing (rustup target add $triple)."
       done ;;
+    linux)
+      need_chrome
+      need zig python3 file objdump
+      cargo zigbuild --help >/dev/null 2>&1 || fail "cargo-zigbuild is not installed (cargo install cargo-zigbuild --locked)."
+      cargo deb --help >/dev/null 2>&1 || fail "cargo-deb is not installed (cargo install cargo-deb --locked)."
+      rustup target list --installed 2>/dev/null | grep -qx "$LINUX_TRIPLE" \
+        || fail "the Rust target is missing (rustup target add $LINUX_TRIPLE)." ;;
     esp)
       IDF_EXPORT="${IDF_PATH:-$HOME/esp-idf}/export.sh"
       [ -f "$IDF_EXPORT" ] || fail "ESP-IDF was not found at $IDF_EXPORT (install v5.3.2, see firmware/README.md)."
@@ -475,6 +488,59 @@ PY
     "the three .bin files, flash_args, SHA256SUMS, README.txt, CHANGELOG.md"
 }
 
+
+# --- Linux (.deb) -------------------------------------------------------
+build_linux() {
+  local dist deb bin stage epoch libs maxglibc date_text
+  dist=$(dist_for linux); deb="$dist/$(name_for linux)"
+  step "Linux: building the program (glibc $LINUX_GLIBC or later)"
+  # PKG_CONFIG_LIBDIR points nowhere on purpose: a build script that asks
+  # pkg-config would otherwise record this Mac's Homebrew folders.
+  CARGO_TARGET_DIR=target/dist-linux RUSTFLAGS="$REMAP" PKG_CONFIG_LIBDIR=/var/empty PKG_CONFIG_PATH= \
+    cargo zigbuild --release -p s01-monitor --target "$LINUX_TRIPLE.$LINUX_GLIBC"
+  bin="target/dist-linux/$LINUX_TRIPLE/release/s01-monitor"
+  [ -f "$bin" ] || fail "the build did not make $bin."
+  file "$bin" | grep -q 'ELF 64-bit LSB.*x86-64' || fail "the program is not a 64-bit x86-64 Linux program."
+  libs=$(objdump -p "$bin" | awk '/NEEDED/ { print $2 }' | C_ORDER | paste -sd'|' -)
+  [ "$libs" = "ld-linux-x86-64.so.2|libc.so.6|libm.so.6" ] || fail "the program links '$libs'; it should need only libc, libm and the loader (the rest is loaded at run time)."
+  maxglibc=$(strings -a "$bin" | grep -o -E 'GLIBC_[0-9]+\.[0-9]+(\.[0-9]+)?' | sed 's/GLIBC_//' | sort -V -u | tail -n1)
+  [ "$(printf '%s\n%s\n' "$maxglibc" "$LINUX_GLIBC" | sort -V | tail -n1)" = "$LINUX_GLIBC" ] \
+    || fail "the program needs glibc $maxglibc, newer than $LINUX_GLIBC."
+  check_no_user "$bin" "the program"
+  grep -q -- "$HOME" "$bin" && fail "the program contains the home folder path."
+  grep -q -- "$ROOT_REL" "$bin" && fail "the program contains the project folder path."
+  grep -q -- '/opt/homebrew' "$bin" && fail "the program contains this Mac's Homebrew folder."
+  echo "Linux x86-64 program, needs glibc $maxglibc or later, links only $libs. No user name or folder in it."
+
+  step "Linux: staging the files"
+  stage="target/dist-linux/stage"
+  rm -rf "$stage"; mkdir -p "$stage"
+  python3 scripts/make_icon.py "$stage/s01-monitor.png" 256
+  cp CHANGELOG.md "$stage/CHANGELOG.md"
+  ensure_guide
+  cp "$GUIDE" "$stage/User-Guide.pdf"
+  write_readme "$stage" scripts/linux_readme.txt "Linux build (Ubuntu)"
+  sed "s/@VERSION@/$VERSION/g" "$stage/README.txt" > "$stage/README.tmp" && mv "$stage/README.tmp" "$stage/README.txt"
+  check_texts "$stage"
+
+  # Every file in the package gets the date of this version's changelog entry
+  # (12:00 UTC), so the package holds neither the build time nor a time zone.
+  date_text=$(grep -m1 '^## ' CHANGELOG.md | sed -E 's/^## +[^ ]+ \(([^)]*)\).*/\1/')
+  epoch=$(date -u -j -f '%d %b %Y %H:%M:%S' "$date_text 12:00:00" +%s 2>/dev/null) || fail "could not read the date '$date_text' of the newest changelog entry."
+
+  step "Linux: making the .deb"
+  mkdir -p "$dist"
+  if [ "$FORCE" -eq 1 ]; then rm -f "$deb"; fi
+  SOURCE_DATE_EPOCH="$epoch" CARGO_TARGET_DIR=target/dist-linux \
+    cargo deb -p s01-monitor --target "$LINUX_TRIPLE" --no-build --no-strip --deb-version "$VERSION" -o "$deb"
+  [ -f "$deb" ] || fail "cargo-deb did not make $deb."
+  python3 scripts/check_deb.py "$deb" "$bin" "$VERSION" "$epoch" "$LOCAL_USER"
+
+  step "Done: Linux"
+  echo "Package: $deb ($(du -h "$deb" | cut -f1))"
+  echo "SHA-256: $(shasum -a 256 "$deb" | cut -d' ' -f1)"
+  echo "Built on this Mac with a cross-compiler. It has not been run on Linux. Install with: sudo apt install ./$(basename "$deb")"
+}
 
 report_zip() { # folder zip note [what the zip holds]
   step "Done"

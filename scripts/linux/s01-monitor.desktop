@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Silence S01 monitor
+GenericName=Scooter CAN bus dashboard
+Comment=Live dashboard for the CAN bus of a Silence S01 scooter
+Exec=s01-monitor
+Icon=s01-monitor
+Terminal=false
+Categories=Utility;
+Keywords=scooter;CAN;S01;Silence;
+StartupWMClass=s01-monitor
